@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Calendar, BarChart3, Users, LogOut, Zap, Settings } from "lucide-react";
+import { Calendar, BarChart3, Users, LogOut, Zap, Settings, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/dashboard/book", icon: Calendar, label: "Book Now" },
   { href: "/dashboard/host", icon: Users, label: "Host Dashboard" },
+  { href: "/dashboard/host/services", icon: Briefcase, label: "My Services" },
   { href: "/dashboard/analytics", icon: BarChart3, label: "Analytics" },
   { href: "/dashboard/host/settings", icon: Settings, label: "Settings" },
 ];

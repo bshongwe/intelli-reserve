@@ -12,35 +12,28 @@
 export const CALENDAR_THEME = {
   // Weekday header styling
   weekdayHeader: {
-    light: "bg-blue-100 text-blue-900 border-blue-200",
-    dark: "dark:bg-blue-900 dark:text-blue-100 dark:border-blue-700",
+    light: "bg-secondary text-secondary-foreground border-secondary",
+    dark: "dark:bg-secondary dark:text-secondary-foreground dark:border-secondary",
   },
 
   // Month/Year caption styling
   caption: {
-    container: "bg-white dark:bg-slate-900 px-4 py-2 rounded-md border border-slate-200 dark:border-slate-700",
-    label: "text-base font-bold text-slate-900 dark:text-white",
+    container: "bg-muted px-4 py-2 rounded-md border border-border",
+    label: "text-base font-bold text-foreground",
   },
 
   // Navigation buttons (previous/next month)
   navigation: {
-    button: "text-white bg-blue-600 hover:bg-blue-700 h-8 w-8",
-    icon: "text-white",
+    button: "text-primary-foreground bg-primary hover:opacity-90 h-8 w-8",
+    icon: "text-primary-foreground",
   },
 
   // Day cells - the main interactive elements
   dayCell: {
-    // Base state - visible at all times (no hover needed)
-    base: "bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-slate-100 border-2 border-slate-300 dark:border-slate-600",
-    
-    // Hover/focus state - indicates interactivity
-    interactive: "hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-100 dark:hover:bg-slate-600 hover:shadow-md hover:scale-105 active:scale-95 active:shadow-lg",
-    
-    // Disabled state - grayed out, not clickable
+    base: "bg-muted text-foreground border-2 border-border",
+    interactive: "hover:border-primary/60 hover:bg-secondary hover:shadow-md hover:scale-105 active:scale-95 active:shadow-lg",
     disabled: "opacity-50 cursor-not-allowed hover:scale-100",
-    
-    // Outside current month - subtle appearance
-    outside: "text-slate-400 dark:text-slate-500 opacity-50",
+    outside: "text-muted-foreground opacity-40",
   },
 
   // Selected date styling
@@ -57,7 +50,7 @@ export const CALENDAR_THEME = {
     background: "bg-gradient-to-b from-amber-400 to-amber-500",
     text: "text-white font-bold",
     border: "border-2 border-amber-500",
-    ring: "ring-2 ring-amber-400 ring-offset-2 dark:ring-offset-slate-900",
+    ring: "ring-2 ring-amber-400 ring-offset-2 dark:ring-offset-background",
     interactive: "hover:shadow-lg hover:shadow-amber-500/60 hover:scale-110 active:scale-95 active:shadow-xl transition-all",
   },
 } as const;

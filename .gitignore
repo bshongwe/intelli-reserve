@@ -1,0 +1,110 @@
+# Dependencies
+node_modules/
+*/node_modules/
+*.pnp
+.pnp.js
+
+# Testing
+coverage/
+*.lcov
+
+# Production builds
+dist/
+build/
+out/
+.next/
+frontend/.next/
+bff/dist/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+*.env
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+.vim
+.editorconfig
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+*.plog
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Backend specific
+backend/**/*.o
+backend/**/*.a
+backend/**/*.so
+backend/**/vendor/
+backend/**/go.sum
+backend/**/.DS_Store
+backend/**/main
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+data/
+postgres_data/
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Development tools
+.env.development
+.env.test
+.editorconfig
+.prettierignore
+.prettierrc
+
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate*
+terraform/*.tfvars
+terraform/**/.terraform/
+terraform/**/*.tfstate*
+terraform/**/*.tfvars
+
+# Generated files
+generated/
+*.generated.go
+*.pb.go
+*.proto.go
+
+# Package manager locks (optional - uncomment if needed)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# IDE workspace settings
+.vscode/settings.json
+.vscode/launch.json
+
+# Misc
+.cache/
+.pytest_cache/
+*.pyc
+__pycache__/

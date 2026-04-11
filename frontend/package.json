@@ -1,0 +1,43 @@
+{
+  "name": "intelli-reserve-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --turbo",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "ui": "shadcn-ui@latest add"
+  },
+  "dependencies": {
+    "@radix-ui/react-label": "^2.0.2",
+    "@radix-ui/react-toast": "^1.1.5",
+    "@tailwindcss/postcss": "^4.2.2",
+    "@tanstack/react-query": "^5.59.0",
+    "axios": "^1.7.9",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^3.0.0",
+    "lucide-react": "^0.475.0",
+    "next": "15.2.0",
+    "next-themes": "^0.4.4",
+    "react": "^19.0.0",
+    "react-day-picker": "^9.0.0",
+    "react-dom": "^19.0.0",
+    "tailwind-merge": "^3.0.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@shadcn/ui": "latest",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9.0.0",
+    "eslint-config-next": "15.2.0",
+    "postcss": "^8.5.0",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.7.0"
+  }
+}

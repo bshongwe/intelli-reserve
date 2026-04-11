@@ -143,20 +143,36 @@ export default function BookPage() {
               {bookingMutation.isPending ? (
                 <span className="flex items-center gap-2 sm:gap-3">
                   <span className="relative flex h-4 w-4">
-                    {[0, 1, 2, 3].map((i) => (
-                      <span
-                        key={i}
-                        className="absolute w-1.5 h-1.5 rounded-full bg-white"
-                        style={{
-                          top: i === 0 ? 0 : i === 2 ? "auto" : "50%",
-                          bottom: i === 2 ? 0 : "auto",
-                          left: i === 3 ? 0 : i === 1 ? "auto" : "50%",
-                          right: i === 1 ? 0 : "auto",
-                          transform: "translate(-50%, -50%)",
-                          animation: `orbit 1.2s ease-in-out ${i * 0.3}s infinite`,
-                        }}
-                      />
-                    ))}
+                    {[0, 1, 2, 3].map((i) => {
+                      let topValue: string | number = "50%";
+                      if (i === 0) topValue = 0;
+                      else if (i === 2) topValue = "auto";
+
+                      let bottomValue: string | number = "auto";
+                      if (i === 2) bottomValue = 0;
+
+                      let leftValue: string | number = "50%";
+                      if (i === 3) leftValue = 0;
+                      else if (i === 1) leftValue = "auto";
+
+                      let rightValue: string | number = "auto";
+                      if (i === 1) rightValue = 0;
+
+                      return (
+                        <span
+                          key={i}
+                          className="absolute w-1.5 h-1.5 rounded-full bg-white"
+                          style={{
+                            top: topValue,
+                            bottom: bottomValue,
+                            left: leftValue,
+                            right: rightValue,
+                            transform: "translate(-50%, -50%)",
+                            animation: `orbit 1.2s ease-in-out ${i * 0.3}s infinite`,
+                          }}
+                        />
+                      );
+                    })}
                     <style>{`
                       @keyframes orbit {
                         0%, 100% { opacity: 0.25; transform: translate(-50%, -50%) scale(0.75); }

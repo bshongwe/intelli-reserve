@@ -11,6 +11,7 @@
     "ui": "shadcn-ui@latest add"
   },
   "dependencies": {
+    "@radix-ui/react-avatar": "^1.1.11",
     "@radix-ui/react-label": "^2.0.2",
     "@radix-ui/react-toast": "^1.1.5",
     "@tailwindcss/postcss": "^4.2.2",
@@ -25,6 +26,7 @@
     "react": "^19.0.0",
     "react-day-picker": "^9.0.0",
     "react-dom": "^19.0.0",
+    "recharts": "^3.8.1",
     "tailwind-merge": "^3.0.0",
     "zod": "^3.23.8"
   },

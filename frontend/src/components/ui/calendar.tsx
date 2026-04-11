@@ -2,8 +2,12 @@ import * as React from "react"
 import { DayPicker } from "react-day-picker"
 
 import { cn } from "@/lib/utils"
+import { CALENDAR_THEME } from "@/lib/calendar-theme"
 
-export type CalendarProps = React.ComponentProps<typeof DayPicker>
+export type CalendarProps = React.ComponentProps<typeof DayPicker> & {
+  /** Optional theme override for accessibility or custom branding */
+  theme?: typeof CALENDAR_THEME
+}
 
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
 
@@ -11,16 +15,20 @@ function Calendar({
   className,
   classNames,
   showOutsideDays = true,
+  theme = CALENDAR_THEME,
   ...props
 }: CalendarProps) {
   return (
-    <div className={cn("p-3", className)}>
+    <div className={cn("p-3 space-y-4", className)}>
       <style>{`
         thead {
           display: none !important;
         }
         table {
-          display: contents !important;
+          display: grid !important;
+          grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+          gap: 0.25rem !important;
+          border-collapse: collapse !important;
         }
         tbody {
           display: contents !important;
@@ -32,55 +40,76 @@ function Calendar({
           display: contents !important;
         }
       `}</style>
-      
-      {/* Unified grid for headers and all dates */}
+
+      {/* Month selector - displayed by DayPicker caption */}
+      {/* Weekday headers */}
       <div className="grid grid-cols-7 gap-1">
-        {/* Manual weekday headers */}
         {WEEKDAYS.map((day) => (
           <div
             key={day}
-            className="text-foreground font-semibold text-xs py-2 text-center"
+            className={cn(
+              "text-center font-bold text-sm py-3 rounded-md border",
+              theme.weekdayHeader.light,
+              theme.weekdayHeader.dark
+            )}
           >
             {day}
           </div>
         ))}
-        
-        {/* Calendar picker - all cells become direct grid children */}
-        <DayPicker
-          showOutsideDays={showOutsideDays}
-          className="contents"
-          classNames={{
-            months: "contents",
-            month: "contents",
-            caption: "hidden",
-            caption_label: "text-sm font-semibold",
-            nav: "space-x-1 flex items-center",
-            nav_button: cn(
-              "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
-            ),
-            nav_button_previous: "absolute left-1",
-            nav_button_next: "absolute right-1",
-            table: "contents",
-            head_row: "contents",
-            head_cell: "contents",
-            row: "contents",
-            cell: "text-center text-sm p-0 relative",
-            day: cn(
-              "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-normal transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-9 w-9"
-            ),
-            day_range_end: "day-range-end",
-            day_selected:
-              "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-            day_today: "bg-accent text-accent-foreground font-semibold",
-            day_outside: "text-muted-foreground opacity-50",
-            day_disabled: "text-muted-foreground opacity-50",
-            day_range_middle: "bg-accent text-accent-foreground",
-            day_hidden: "invisible",
-            ...classNames,
-          }}
-          {...props}
-        />
       </div>
+
+      {/* Calendar dates */}
+      <DayPicker
+        showOutsideDays={showOutsideDays}
+        className="w-full"
+        classNames={{
+          months: "flex flex-col space-y-4",
+          month: "space-y-4",
+          caption: cn(
+            "flex justify-center items-center gap-4 rounded-md border mb-4",
+            theme.caption.container
+          ),
+          caption_label: theme.caption.label,
+          nav: "flex gap-2",
+          nav_button: cn(
+            "inline-flex items-center justify-center rounded-md text-sm font-semibold h-8 w-8 p-0 transition-all hover:shadow-md active:scale-95",
+            theme.navigation.button
+          ),
+          nav_button_previous: "",
+          nav_button_next: "",
+          table: "w-full grid grid-cols-7 gap-1",
+          head_row: "hidden",
+          head_cell: "hidden",
+          tbody: "contents",
+          row: "contents",
+          cell: "text-center text-sm p-0",
+          day: cn(
+            "inline-flex items-center justify-center rounded-lg text-sm font-semibold h-10 w-10 transition-all cursor-pointer",
+            theme.dayCell.base,
+            theme.dayCell.interactive,
+            "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+          ),
+          day_selected: cn(
+            theme.selected.background,
+            theme.selected.text,
+            theme.selected.border,
+            theme.selected.shadow,
+            theme.selected.interactive
+          ),
+          day_today: cn(
+            theme.today.background,
+            theme.today.text,
+            theme.today.border,
+            theme.today.ring,
+            theme.today.interactive
+          ),
+          day_outside: cn("cursor-default", theme.dayCell.outside),
+          day_disabled: cn("cursor-not-allowed", theme.dayCell.disabled),
+          day_hidden: "invisible",
+          ...classNames,
+        }}
+        {...props}
+      />
     </div>
   )
 }

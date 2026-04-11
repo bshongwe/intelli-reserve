@@ -54,7 +54,7 @@ export default function BookPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <div>
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-violet-500 to-primary bg-clip-text text-transparent">Book a Service</h1>
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-rose-600 to-primary bg-clip-text text-transparent">Book a Service</h1>
         <p className="text-muted-foreground mt-2">Select a date and enter your inventory ID to proceed with payment</p>
       </div>
 
@@ -135,10 +135,35 @@ export default function BookPage() {
               onClick={handleBook}
               disabled={bookingMutation.isPending || !isFormValid}
               size="lg"
+              variant="success"
               className="w-full"
             >
               {bookingMutation.isPending ? (
-                <><div className="animate-spin"><CreditCard className="w-4 h-4" /></div>Processing...</>
+                <span className="flex items-center gap-3">
+                  <span className="relative flex h-4 w-4">
+                    {[0, 1, 2, 3].map((i) => (
+                      <span
+                        key={i}
+                        className="absolute w-1.5 h-1.5 rounded-full bg-white"
+                        style={{
+                          top: i === 0 ? 0 : i === 2 ? "auto" : "50%",
+                          bottom: i === 2 ? 0 : "auto",
+                          left: i === 3 ? 0 : i === 1 ? "auto" : "50%",
+                          right: i === 1 ? 0 : "auto",
+                          transform: "translate(-50%, -50%)",
+                          animation: `orbit 1.2s ease-in-out ${i * 0.3}s infinite`,
+                        }}
+                      />
+                    ))}
+                    <style>{`
+                      @keyframes orbit {
+                        0%, 100% { opacity: 0.25; transform: translate(-50%, -50%) scale(0.75); }
+                        50% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+                      }
+                    `}</style>
+                  </span>
+                  Processing...
+                </span>
               ) : (
                 <><CreditCard className="w-4 h-4" />Confirm & Pay into Escrow</>
               )}

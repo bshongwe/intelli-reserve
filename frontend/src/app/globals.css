@@ -2,48 +2,48 @@
 
 @layer base {
   :root {
-    --background: 240 20% 98%;
-    --foreground: 240 15% 10%;
+    --background: 0 20% 98%;
+    --foreground: 0 15% 10%;
     --card: 0 0% 100%;
-    --card-foreground: 240 15% 10%;
+    --card-foreground: 0 15% 10%;
     --popover: 0 0% 100%;
-    --popover-foreground: 240 15% 10%;
-    --muted: 240 10% 94%;
-    --muted-foreground: 240 8% 46%;
-    --accent: 245 80% 60%;
+    --popover-foreground: 0 15% 10%;
+    --muted: 0 10% 94%;
+    --muted-foreground: 0 8% 46%;
+    --accent: 0 80% 55%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 12% 88%;
-    --input: 240 12% 88%;
-    --primary: 245 80% 58%;
+    --border: 0 12% 88%;
+    --input: 0 12% 88%;
+    --primary: 0 80% 55%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 245 60% 95%;
-    --secondary-foreground: 245 80% 40%;
-    --ring: 245 80% 58%;
+    --secondary: 0 60% 95%;
+    --secondary-foreground: 0 80% 35%;
+    --ring: 0 80% 55%;
     --radius: 0.625rem;
   }
 
   .dark {
-    --background: 240 18% 8%;
-    --foreground: 240 10% 96%;
-    --card: 240 16% 11%;
-    --card-foreground: 240 10% 96%;
-    --popover: 240 16% 11%;
-    --popover-foreground: 240 10% 96%;
-    --muted: 240 12% 17%;
-    --muted-foreground: 240 8% 60%;
-    --accent: 245 75% 65%;
+    --background: 0 18% 8%;
+    --foreground: 0 10% 96%;
+    --card: 0 16% 11%;
+    --card-foreground: 0 10% 96%;
+    --popover: 0 16% 11%;
+    --popover-foreground: 0 10% 96%;
+    --muted: 0 12% 17%;
+    --muted-foreground: 0 8% 60%;
+    --accent: 0 75% 60%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 62% 40%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 12% 20%;
-    --input: 240 12% 20%;
-    --primary: 245 75% 65%;
+    --border: 0 12% 20%;
+    --input: 0 12% 20%;
+    --primary: 0 75% 55%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 245 30% 20%;
-    --secondary-foreground: 245 70% 80%;
-    --ring: 245 75% 65%;
+    --secondary: 0 30% 20%;
+    --secondary-foreground: 0 70% 80%;
+    --ring: 0 75% 55%;
   }
 
   * {

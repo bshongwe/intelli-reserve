@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils"
 
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link"
+  variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link" | "success"
   size?: "default" | "sm" | "lg" | "icon"
 }
 
@@ -21,6 +21,7 @@ const buttonVariants = (props?: { variant?: string; size?: string }) => {
     secondary: "bg-gradient-to-b from-slate-600 to-slate-700 text-white shadow-md hover:from-slate-700 hover:to-slate-800 hover:shadow-lg hover:shadow-slate-500/50 active:from-slate-800 active:to-slate-900",
     ghost: "text-foreground hover:bg-accent hover:text-accent-foreground hover:shadow-md active:bg-accent/80 border border-transparent hover:border-accent",
     link: "text-blue-600 dark:text-blue-400 underline-offset-4 hover:underline hover:text-blue-700 dark:hover:text-blue-300 font-semibold",
+    success: "bg-gradient-to-b from-emerald-500 to-emerald-600 text-white shadow-md hover:from-emerald-600 hover:to-emerald-700 hover:shadow-lg hover:shadow-emerald-500/50 active:from-emerald-700 active:to-emerald-800",
   } as Record<string, string>
 
   const sizes = {

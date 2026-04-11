@@ -21,7 +21,7 @@ export function Sidebar() {
         <div className="shrink-0 w-8 h-8 bg-gradient-to-br from-primary to-violet-500 rounded-xl flex items-center justify-center shadow-md shadow-primary/30">
           <Zap className="w-4 h-4 text-white" strokeWidth={2.5} />
         </div>
-        <h1 className="min-w-0 font-bold text-xl bg-gradient-to-r from-primary to-violet-500 bg-clip-text text-transparent">
+        <h1 className="min-w-0 font-bold text-xl bg-gradient-to-r from-violet-500 to-primary bg-clip-text text-transparent">
           IntelliReserve
         </h1>
       </div>

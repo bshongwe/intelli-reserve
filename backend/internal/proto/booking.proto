@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package intelli.booking;
+
+option go_package = "github.com/intelli-reserve/backend/internal/proto";
+
+service BookingService {
+  rpc CreateBooking(CreateBookingRequest) returns (CreateBookingResponse);
+}
+
+message CreateBookingRequest {
+  string inventory_id = 1;
+  string slot_start = 2;  // ISO datetime
+  string user_id = 3;
+  string tenant_id = 4;
+}
+
+message CreateBookingResponse {
+  string booking_id = 1;
+  string status = 2;
+  string message = 3;
+}

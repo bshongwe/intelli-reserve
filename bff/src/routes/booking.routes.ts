@@ -32,9 +32,18 @@ router.post('/', async (req, res) => {
     );
 
     res.status(201).json({
-      bookingId: response.booking?.id,
-      status: response.booking?.status || 'INITIATED',
-      message: 'Booking created successfully.'
+      id: response.booking?.id,
+      serviceId: response.booking?.serviceId,
+      timeSlotId: response.booking?.timeSlotId,
+      hostId: response.booking?.hostId,
+      clientName: response.booking?.clientName,
+      clientEmail: response.booking?.clientEmail,
+      clientPhone: response.booking?.clientPhone,
+      numberOfParticipants: response.booking?.numberOfParticipants,
+      status: response.booking?.status || 'pending',
+      notes: response.booking?.notes,
+      createdAt: response.booking?.createdAt,
+      updatedAt: response.booking?.updatedAt,
     });
   } catch (error: any) {
     if (error.name === 'ZodError') {

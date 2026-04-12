@@ -1,14 +1,18 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, DollarSign, Users, TrendingUp, AlertCircle } from "lucide-react";
+import { Calendar, DollarSign, Users, TrendingUp, AlertCircle, Check, X } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
-import { analyticsAPI } from "@/lib/api";
+import { analyticsAPI, bookingsAPI } from "@/lib/api";
 import { DashboardLoadingSkeleton } from "@/components/common/DashboardLoadingSkeleton";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function HostDashboard() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
   // Get host ID from auth context (TODO: implement auth)
   const hostId = "host-001"; // Placeholder - should come from auth context
 
@@ -20,6 +24,54 @@ export default function HostDashboard() {
     gcTime: 10 * 60 * 1000, // 10 minutes - cache period
     refetchInterval: 30 * 1000, // Refetch every 30 seconds if window is focused
     refetchIntervalInBackground: false, // Don't refetch in background
+  });
+
+  // Fetch pending bookings
+  const { data: pendingBookings = [], isLoading: bookingsLoading } = useQuery({
+    queryKey: ["pending-bookings", hostId],
+    queryFn: () => bookingsAPI.getHostBookings(hostId, 'pending'),
+    staleTime: 1 * 60 * 1000, // 1 minute - keep fresh
+    refetchInterval: 15 * 1000, // Refetch every 15 seconds
+  });
+
+  // Confirm booking mutation
+  const confirmBookingMutation = useMutation({
+    mutationFn: (bookingId: string) => bookingsAPI.updateBookingStatus(bookingId, 'confirmed'),
+    onSuccess: () => {
+      toast({
+        title: "Booking Confirmed",
+        description: "The booking has been confirmed.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["pending-bookings", hostId] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-metrics", hostId] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to confirm booking",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Cancel booking mutation
+  const cancelBookingMutation = useMutation({
+    mutationFn: (bookingId: string) => bookingsAPI.cancelBooking(bookingId, "Cancelled by host"),
+    onSuccess: () => {
+      toast({
+        title: "Booking Cancelled",
+        description: "The booking has been cancelled.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["pending-bookings", hostId] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-metrics", hostId] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to cancel booking",
+        variant: "destructive",
+      });
+    },
   });
 
   const revenueData = dashboardData?.revenueData || [];
@@ -128,26 +180,70 @@ export default function HostDashboard() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Upcoming Bookings */}
+        {/* Pending Bookings - Confirmation Required */}
         <Card className="overflow-hidden">
           <CardHeader className="pb-3 sm:pb-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="min-w-0">
-                <CardTitle className="text-base sm:text-lg">Upcoming Bookings</CardTitle>
-                <CardDescription className="text-xs sm:text-sm">Next 7 days</CardDescription>
+                <CardTitle className="text-base sm:text-lg">Pending Confirmation</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">Awaiting your confirmation</CardDescription>
               </div>
-              <Button variant="outline" size="sm" className="gap-1 text-xs sm:text-sm w-full sm:w-auto">
-                <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                <span className="hidden sm:inline">View Calendar</span>
-                <span className="sm:hidden">Calendar</span>
-              </Button>
+              {pendingBookings.length > 0 && (
+                <div className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-1 rounded">
+                  {pendingBookings.length} pending
+                </div>
+              )}
             </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-3 sm:space-y-4">
-              <div className="text-center py-8 text-muted-foreground">
-                <p className="text-sm">Booking data coming soon from API</p>
-              </div>
+              {bookingsLoading ? (
+                <div className="text-center py-8">
+                  <p className="text-sm text-muted-foreground">Loading bookings...</p>
+                </div>
+              ) : pendingBookings.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p className="text-sm">No pending bookings</p>
+                </div>
+              ) : (
+                pendingBookings.map((booking: any) => (
+                  <div key={booking.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <p className="font-medium text-sm line-clamp-1">{booking.serviceId}</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {new Date(booking.createdAt).toLocaleDateString()} at {new Date(booking.createdAt).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
+                      </p>
+                    </div>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 sm:flex-none gap-1.5 text-xs h-8"
+                        onClick={() => confirmBookingMutation.mutate(booking.id)}
+                        disabled={confirmBookingMutation.isPending || cancelBookingMutation.isPending}
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">Confirm</span>
+                        <span className="sm:hidden">Approve</span>
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 sm:flex-none gap-1.5 text-xs h-8 text-destructive hover:text-destructive"
+                        onClick={() => cancelBookingMutation.mutate(booking.id)}
+                        disabled={confirmBookingMutation.isPending || cancelBookingMutation.isPending}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">Reject</span>
+                        <span className="sm:hidden">Deny</span>
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </CardContent>
         </Card>

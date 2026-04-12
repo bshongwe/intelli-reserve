@@ -46,22 +46,15 @@ export function RecurringSlotGenerator({
     handleSubmit,
     formState: { errors },
     reset,
-    watch,
   } = useForm<RecurringSlotData>({
     resolver: zodResolver(recurringSlotSchema),
     defaultValues: {
       startTime: "09:00",
       endTime: "17:00",
       daysOfWeek: selectedDays,
-      startDate: new Date(),
+      startDate: formatDateForInput(new Date()),
     },
   });
-
-  // Watch the startDate to convert it to proper format for input
-  const startDateValue = watch("startDate");
-  const startDateString = startDateValue instanceof Date 
-    ? formatDateForInput(startDateValue)
-    : startDateValue;
 
   const onSubmit = (data: RecurringSlotData) => {
     if (selectedDays.length === 0) {
@@ -177,10 +170,7 @@ export function RecurringSlotGenerator({
                 <Input
                   id="startDate"
                   type="date"
-                  value={startDateString}
-                  {...register("startDate", {
-                    valueAsDate: true,
-                  })}
+                  {...register("startDate")}
                   className="text-xs"
                 />
                 {errors.startDate && (
@@ -196,9 +186,7 @@ export function RecurringSlotGenerator({
                 <Input
                   id="endDate"
                   type="date"
-                  {...register("endDate", {
-                    valueAsDate: true,
-                  })}
+                  {...register("endDate")}
                   className="text-xs"
                 />
                 {errors.endDate && (

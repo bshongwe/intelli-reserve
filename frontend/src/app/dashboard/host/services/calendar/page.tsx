@@ -163,8 +163,8 @@ export default function AvailabilityCalendarPage() {
       startTime: string;
       endTime: string;
       daysOfWeek: number[];
-      startDate: Date;
-      endDate?: Date;
+      startDate: string;
+      endDate?: string;
     }) => {
       if (!selectedServiceId) throw new Error("Service must be selected");
       return timeSlotsAPI.createRecurringSlots(
@@ -172,8 +172,8 @@ export default function AvailabilityCalendarPage() {
         startTime,
         endTime,
         daysOfWeek,
-        format(startDate, "yyyy-MM-dd"),
-        endDate ? format(endDate, "yyyy-MM-dd") : undefined
+        startDate,
+        endDate
       );
     },
     onSuccess: (data) => {
@@ -267,8 +267,8 @@ export default function AvailabilityCalendarPage() {
     startTime: string;
     endTime: string;
     daysOfWeek: number[];
-    startDate: Date;
-    endDate?: Date;
+    startDate: string;
+    endDate?: string;
   }) => {
     createRecurringMutation.mutate({
       startTime,

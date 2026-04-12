@@ -33,8 +33,8 @@ export const recurringSlotSchema = z.object({
   startTime: z.string().regex(/^\d{2}:\d{2}$/, "Invalid time format (HH:MM)"),
   endTime: z.string().regex(/^\d{2}:\d{2}$/, "Invalid time format (HH:MM)"),
   daysOfWeek: z.array(z.number().min(0).max(6)).min(1, "Select at least one day"),
-  startDate: z.date(),
-  endDate: z.date().optional(),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)"),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)").optional(),
 });
 
 export type RecurringSlotData = z.infer<typeof recurringSlotSchema>;

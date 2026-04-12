@@ -6,26 +6,27 @@ import { Button } from "@/components/ui/button";
 import { Calendar, DollarSign, Users, TrendingUp, AlertCircle } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { analyticsAPI } from "@/lib/api";
+import { DashboardLoadingSkeleton } from "@/components/common/DashboardLoadingSkeleton";
 
 export default function HostDashboard() {
   // Get host ID from auth context (TODO: implement auth)
   const hostId = "host-001"; // Placeholder - should come from auth context
 
-  // Fetch dashboard metrics
+  // Fetch dashboard metrics with optimized caching
   const { data: dashboardData, isLoading } = useQuery({
     queryKey: ["dashboard-metrics", hostId],
     queryFn: () => analyticsAPI.getDashboardMetrics(hostId),
+    staleTime: 5 * 60 * 1000, // 5 minutes - keep data fresh
+    gcTime: 10 * 60 * 1000, // 10 minutes - cache period
+    refetchInterval: 30 * 1000, // Refetch every 30 seconds if window is focused
+    refetchIntervalInBackground: false, // Don't refetch in background
   });
 
   const revenueData = dashboardData?.revenueData || [];
   const occupancyData = dashboardData?.occupancyData || [];
 
   if (isLoading) {
-    return (
-      <div className="space-y-8 py-6 px-3 sm:px-4 md:px-6 lg:px-8">
-        <p className="text-sm text-muted-foreground">Loading dashboard...</p>
-      </div>
-    );
+    return <DashboardLoadingSkeleton kpiCount={4} showCharts label="Loading dashboard..." />;
   }
 
   return (

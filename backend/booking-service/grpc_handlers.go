@@ -21,6 +21,12 @@ type BookingServiceServer struct {
 	db *pgx.Conn
 }
 
+// Error message constants
+const (
+	errBookingIDRequired = "booking_id is required"
+	errBookingNotFound   = "booking not found"
+)
+
 // NewBookingServiceServer creates a new BookingServiceServer
 func NewBookingServiceServer(db *pgx.Conn) *BookingServiceServer {
 	return &BookingServiceServer{db: db}
@@ -78,8 +84,8 @@ func (s *BookingServiceServer) GetBooking(ctx context.Context, req *pb.GetBookin
 	if req.BookingId == "" {
 		return &pb.GetBookingResponse{
 			Success:      false,
-			ErrorMessage: "booking_id is required",
-		}, status.Error(codes.InvalidArgument, "booking_id is required")
+			ErrorMessage: errBookingIDRequired,
+		}, status.Error(codes.InvalidArgument, errBookingIDRequired)
 	}
 
 	var booking common.Booking
@@ -99,8 +105,8 @@ func (s *BookingServiceServer) GetBooking(ctx context.Context, req *pb.GetBookin
 	if err == sql.ErrNoRows {
 		return &pb.GetBookingResponse{
 			Success:      false,
-			ErrorMessage: "booking not found",
-		}, status.Error(codes.NotFound, "booking not found")
+			ErrorMessage: errBookingNotFound,
+		}, status.Error(codes.NotFound, errBookingNotFound)
 	}
 
 	if err != nil {
@@ -322,8 +328,8 @@ func (s *BookingServiceServer) UpdateBookingStatus(ctx context.Context, req *pb.
 	if err == sql.ErrNoRows {
 		return &pb.UpdateBookingStatusResponse{
 			Success:      false,
-			ErrorMessage: "booking not found",
-		}, status.Error(codes.NotFound, "booking not found")
+			ErrorMessage: errBookingNotFound,
+		}, status.Error(codes.NotFound, errBookingNotFound)
 	}
 
 	if err != nil {
@@ -347,8 +353,8 @@ func (s *BookingServiceServer) CancelBooking(ctx context.Context, req *pb.Cancel
 	if req.BookingId == "" {
 		return &pb.CancelBookingResponse{
 			Success:      false,
-			ErrorMessage: "booking_id is required",
-		}, status.Error(codes.InvalidArgument, "booking_id is required")
+			ErrorMessage: errBookingIDRequired,
+		}, status.Error(codes.InvalidArgument, errBookingIDRequired)
 	}
 
 	now := time.Now().UTC()
@@ -372,8 +378,8 @@ func (s *BookingServiceServer) CancelBooking(ctx context.Context, req *pb.Cancel
 	if err == sql.ErrNoRows {
 		return &pb.CancelBookingResponse{
 			Success:      false,
-			ErrorMessage: "booking not found",
-		}, status.Error(codes.NotFound, "booking not found")
+			ErrorMessage: errBookingNotFound,
+		}, status.Error(codes.NotFound, errBookingNotFound)
 	}
 
 	if err != nil {
@@ -397,8 +403,8 @@ func (s *BookingServiceServer) DeleteBooking(ctx context.Context, req *pb.Delete
 	if req.BookingId == "" {
 		return &pb.DeleteBookingResponse{
 			Success:      false,
-			ErrorMessage: "booking_id is required",
-		}, status.Error(codes.InvalidArgument, "booking_id is required")
+			ErrorMessage: errBookingIDRequired,
+		}, status.Error(codes.InvalidArgument, errBookingIDRequired)
 	}
 
 	query := "DELETE FROM bookings WHERE id = $1"
@@ -415,8 +421,8 @@ func (s *BookingServiceServer) DeleteBooking(ctx context.Context, req *pb.Delete
 	if result.RowsAffected() == 0 {
 		return &pb.DeleteBookingResponse{
 			Success:      false,
-			ErrorMessage: "booking not found",
-		}, status.Error(codes.NotFound, "booking not found")
+			ErrorMessage: errBookingNotFound,
+		}, status.Error(codes.NotFound, errBookingNotFound)
 	}
 
 	log.Printf("✅ Booking deleted via gRPC: %s", req.BookingId)

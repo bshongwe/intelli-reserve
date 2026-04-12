@@ -311,7 +311,7 @@ export function createServiceRoutes(pool: Pool): Router {
   });
 
   // Update service
-  router.put('/services/:id', async (req: Request, res: Response) => {
+  router.put('/:id', async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       const serviceReq: Partial<ServiceRequest> = req.body;
@@ -398,7 +398,7 @@ export function createServiceRoutes(pool: Pool): Router {
   });
 
   // Delete single service
-  router.delete('/services/:id', async (req: Request, res: Response) => {
+  router.delete('/:id', async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       const result = await pool.query(`DELETE FROM services WHERE id = $1`, [id]);
@@ -415,7 +415,7 @@ export function createServiceRoutes(pool: Pool): Router {
   });
 
   // Bulk delete services
-  router.post('/services/bulk/delete', async (req: Request, res: Response) => {
+  router.post('/bulk/delete', async (req: Request, res: Response) => {
     try {
       const { ids } = req.body;
 

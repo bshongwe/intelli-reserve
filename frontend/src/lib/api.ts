@@ -277,6 +277,19 @@ export const timeSlotsAPI = {
       body: JSON.stringify({ isAvailable }),
     });
   },
+
+  /**
+   * Reorder time slots for a service
+   */
+  reorderTimeSlots: async (
+    serviceId: string,
+    slotIds: string[]
+  ): Promise<{ message: string }> => {
+    return apiCall(`/time-slots/reorder`, {
+      method: 'PUT',
+      body: JSON.stringify({ serviceId, slotIds }),
+    });
+  },
 };
 
 // Analytics API

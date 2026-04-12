@@ -182,7 +182,7 @@ export function createServiceRoutes(pool: Pool): Router {
         isAvailable: row.is_available,
         isRecurring: row.is_recurring,
         recurringRuleId: row.recurring_rule_id,
-        bookedCount: row.booked_participants,
+        bookedCount: row.booked_count,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
       }));
@@ -202,8 +202,8 @@ export function createServiceRoutes(pool: Pool): Router {
       const now = new Date().toISOString();
 
       const result = await pool.query(
-        `INSERT INTO time_slots (id, service_id, slot_date, start_time, end_time, is_available, is_recurring, booked_participants, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        `INSERT INTO time_slots (id, service_id, slot_date, start_time, end_time, is_available, is_recurring, booked_count, created_at, updated_at)
+        VALUES ($1, $2, $3::date, $4::time, $5::time, $6, $7, $8, $9, $10)
         RETURNING *`,
         [id, slotReq.serviceId, slotReq.slotDate, slotReq.startTime, slotReq.endTime, true, false, 0, now, now]
       );
@@ -217,7 +217,7 @@ export function createServiceRoutes(pool: Pool): Router {
         endTime: slot.end_time,
         isAvailable: slot.is_available,
         isRecurring: slot.is_recurring,
-        bookedCount: slot.booked_participants,
+        bookedCount: slot.booked_count,
         createdAt: slot.created_at,
         updatedAt: slot.updated_at,
       });
@@ -248,8 +248,8 @@ export function createServiceRoutes(pool: Pool): Router {
         const dateStr = current.toISOString().split('T')[0];
 
         await pool.query(
-          `INSERT INTO time_slots (id, service_id, slot_date, start_time, end_time, is_available, is_recurring, booked_participants, created_at, updated_at)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+          `INSERT INTO time_slots (id, service_id, slot_date, start_time, end_time, is_available, is_recurring, booked_count, created_at, updated_at)
+          VALUES ($1, $2, $3::date, $4::time, $5::time, $6, $7, $8, $9, $10)`,
           [id, slotReq.serviceId, dateStr, slotReq.startTime, slotReq.endTime, true, true, 0, now, now]
         );
 

@@ -6,6 +6,7 @@ import bookingRoutes from './routes/booking.routes';
 import dashboardRoutes from './routes/dashboard.routes';
 import createServiceRoutes from './routes/services.routes';
 import createAnalyticsRoutes from './routes/analytics.routes';
+import createUserRoutes from './routes/users.routes';
 
 dotenv.config();
 
@@ -17,7 +18,7 @@ const pool = new Pool({
   user: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD || 'postgres',
   host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432'),
+  port: Number.parseInt(process.env.DB_PORT || '5432'),
   database: process.env.DB_NAME || 'intelli_reserve',
 });
 
@@ -38,6 +39,7 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/services', createServiceRoutes(pool));
 app.use('/api/analytics', createAnalyticsRoutes(pool));
+app.use('/api/users', createUserRoutes(pool));
 
 // Global error handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

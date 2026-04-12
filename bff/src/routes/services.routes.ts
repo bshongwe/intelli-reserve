@@ -237,23 +237,30 @@ export function createServiceRoutes(pool: Pool): Router {
       let generatedCount = 0;
       const now = new Date().toISOString();
 
-      for (let current = new Date(startDate); current <= endDate; current.setDate(current.getDate() + 1)) {
+      // Properly iterate through dates
+      const current = new Date(startDate);
+      while (current <= endDate) {
         const dayOfWeek = current.getDay();
 
-        if (!slotReq.daysOfWeek.includes(dayOfWeek)) {
-          continue;
+        if (slotReq.daysOfWeek.includes(dayOfWeek)) {
+          const id = uuidv4();
+          // Format date as YYYY-MM-DD to avoid timezone issues
+          const year = current.getFullYear();
+          const month = String(current.getMonth() + 1).padStart(2, '0');
+          const day = String(current.getDate()).padStart(2, '0');
+          const dateStr = `${year}-${month}-${day}`;
+
+          await pool.query(
+            `INSERT INTO time_slots (id, service_id, slot_date, start_time, end_time, is_available, is_recurring, booked_count, created_at, updated_at)
+            VALUES ($1, $2, $3::date, $4::time, $5::time, $6, $7, $8, $9, $10)`,
+            [id, slotReq.serviceId, dateStr, slotReq.startTime, slotReq.endTime, true, true, 0, now, now]
+          );
+
+          generatedCount++;
         }
 
-        const id = uuidv4();
-        const dateStr = current.toISOString().split('T')[0];
-
-        await pool.query(
-          `INSERT INTO time_slots (id, service_id, slot_date, start_time, end_time, is_available, is_recurring, booked_count, created_at, updated_at)
-          VALUES ($1, $2, $3::date, $4::time, $5::time, $6, $7, $8, $9, $10)`,
-          [id, slotReq.serviceId, dateStr, slotReq.startTime, slotReq.endTime, true, true, 0, now, now]
-        );
-
-        generatedCount++;
+        // Move to next day
+        current.setDate(current.getDate() + 1);
       }
 
       res.status(201).json({

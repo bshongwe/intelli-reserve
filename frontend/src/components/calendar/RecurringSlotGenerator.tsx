@@ -39,25 +39,26 @@ export function RecurringSlotGenerator({
 }: RecurringSlotGeneratorProps) {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedDays, setSelectedDays] = useState<number[]>([1, 2, 3, 4, 5]); // Default: Mon-Fri
 
   const {
     register,
     handleSubmit,
     formState: { errors },
     reset,
+    watch,
+    setValue,
   } = useForm<RecurringSlotData>({
     resolver: zodResolver(recurringSlotSchema),
     defaultValues: {
       startTime: "09:00",
       endTime: "17:00",
-      daysOfWeek: selectedDays,
+      daysOfWeek: [1, 2, 3, 4, 5],
       startDate: formatDateForInput(new Date()),
     },
   });
 
   const onSubmit = (data: RecurringSlotData) => {
-    if (selectedDays.length === 0) {
+    if (data.daysOfWeek.length === 0) {
       toast({
         title: "Error",
         description: "Please select at least one day of the week",
@@ -66,19 +67,10 @@ export function RecurringSlotGenerator({
       return;
     }
 
-    onGenerateSlots({
-      ...data,
-      daysOfWeek: selectedDays,
-    });
+    onGenerateSlots(data);
 
     setIsOpen(false);
     reset();
-  };
-
-  const toggleDay = (day: number) => {
-    setSelectedDays((prev) =>
-      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
-    );
   };
 
   return (
@@ -141,18 +133,28 @@ export function RecurringSlotGenerator({
           <div className="space-y-3">
             <Label className="text-sm font-medium">Days of Week</Label>
             <div className="grid grid-cols-2 gap-3">
-              {DAYS_OF_WEEK.map((day) => (
-                <div key={day.value} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`day-${day.value}`}
-                    checked={selectedDays.includes(day.value)}
-                    onCheckedChange={() => toggleDay(day.value)}
-                  />
-                  <Label htmlFor={`day-${day.value}`} className="text-xs font-normal">
-                    {day.label}
-                  </Label>
-                </div>
-              ))}
+              {DAYS_OF_WEEK.map((day) => {
+                const currentDays = watch("daysOfWeek");
+                const isChecked = currentDays.includes(day.value);
+                
+                return (
+                  <div key={day.value} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`day-${day.value}`}
+                      checked={isChecked}
+                      onCheckedChange={() => {
+                        const newDays = isChecked
+                          ? currentDays.filter((d) => d !== day.value)
+                          : [...currentDays, day.value];
+                        setValue("daysOfWeek", newDays);
+                      }}
+                    />
+                    <Label htmlFor={`day-${day.value}`} className="text-xs font-normal">
+                      {day.label}
+                    </Label>
+                  </div>
+                );
+              })}
             </div>
             {errors.daysOfWeek && (
               <p className="text-xs text-destructive">{errors.daysOfWeek.message}</p>

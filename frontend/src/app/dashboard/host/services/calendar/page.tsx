@@ -185,10 +185,11 @@ export default function AvailabilityCalendarPage() {
         description: `Created ${data.count} recurring time slots`,
       });
     },
-    onError: () => {
+    onError: (error: unknown) => {
+      const message = error instanceof Error ? error.message : "Failed to create recurring slots";
       toast({
         title: "Error",
-        description: "Failed to create recurring slots",
+        description: message,
         variant: "destructive",
       });
     },

@@ -209,7 +209,7 @@ export const timeSlotsAPI = {
    * Get time slots for a service on a specific date
    */
   getTimeSlots: async (serviceId: string, date: string): Promise<TimeSlot[]> => {
-    return apiCall(`/time-slots?serviceId=${serviceId}&date=${date}`);
+    return apiCall(`/services/time-slots?serviceId=${serviceId}&date=${date}`);
   },
 
   /**
@@ -221,7 +221,7 @@ export const timeSlotsAPI = {
     startTime: string,
     endTime: string
   ): Promise<TimeSlot> => {
-    return apiCall(`/time-slots`, {
+    return apiCall(`/services/time-slots`, {
       method: 'POST',
       body: JSON.stringify({
         serviceId,
@@ -243,7 +243,7 @@ export const timeSlotsAPI = {
     startDate: string,
     endDate?: string
   ): Promise<{ message: string; count: number }> => {
-    return apiCall(`/recurring-slots`, {
+    return apiCall(`/services/recurring-slots`, {
       method: 'POST',
       body: JSON.stringify({
         serviceId,
@@ -260,7 +260,7 @@ export const timeSlotsAPI = {
    * Delete a time slot
    */
   deleteTimeSlot: async (slotId: string): Promise<void> => {
-    return apiCall(`/time-slots/${slotId}`, {
+    return apiCall(`/services/time-slots/${slotId}`, {
       method: 'DELETE',
     });
   },
@@ -272,7 +272,7 @@ export const timeSlotsAPI = {
     slotId: string,
     isAvailable: boolean
   ): Promise<void> => {
-    return apiCall(`/time-slots/${slotId}/availability`, {
+    return apiCall(`/services/time-slots/${slotId}/availability`, {
       method: 'PATCH',
       body: JSON.stringify({ isAvailable }),
     });
@@ -285,7 +285,7 @@ export const timeSlotsAPI = {
     serviceId: string,
     slotIds: string[]
   ): Promise<{ message: string }> => {
-    return apiCall(`/time-slots/reorder`, {
+    return apiCall(`/services/time-slots/reorder`, {
       method: 'PUT',
       body: JSON.stringify({ serviceId, slotIds }),
     });

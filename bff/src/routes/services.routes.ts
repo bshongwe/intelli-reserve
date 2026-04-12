@@ -310,6 +310,175 @@ export function createServiceRoutes(pool: Pool): Router {
     }
   });
 
+  // Update service
+  router.put('/services/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const serviceReq: Partial<ServiceRequest> = req.body;
+      const now = new Date().toISOString();
+
+      // Build dynamic update query
+      const updates: string[] = [];
+      const values: any[] = [];
+      let paramCount = 1;
+
+      if (serviceReq.name !== undefined) {
+        updates.push(`name = $${paramCount}`);
+        values.push(serviceReq.name);
+        paramCount++;
+      }
+      if (serviceReq.description !== undefined) {
+        updates.push(`description = $${paramCount}`);
+        values.push(serviceReq.description);
+        paramCount++;
+      }
+      if (serviceReq.category !== undefined) {
+        updates.push(`category = $${paramCount}`);
+        values.push(serviceReq.category);
+        paramCount++;
+      }
+      if (serviceReq.durationMinutes !== undefined) {
+        updates.push(`duration_minutes = $${paramCount}`);
+        values.push(serviceReq.durationMinutes);
+        paramCount++;
+      }
+      if (serviceReq.basePrice !== undefined) {
+        updates.push(`base_price = $${paramCount}`);
+        values.push(serviceReq.basePrice);
+        paramCount++;
+      }
+      if (serviceReq.maxParticipants !== undefined) {
+        updates.push(`max_participants = $${paramCount}`);
+        values.push(serviceReq.maxParticipants);
+        paramCount++;
+      }
+      if (serviceReq.isActive !== undefined) {
+        updates.push(`is_active = $${paramCount}`);
+        values.push(serviceReq.isActive);
+        paramCount++;
+      }
+
+      if (updates.length === 0) {
+        return res.status(400).json({ error: 'No fields to update' });
+      }
+
+      updates.push(`updated_at = $${paramCount}`);
+      values.push(now);
+      paramCount++;
+
+      values.push(id);
+
+      const result = await pool.query(
+        `UPDATE services SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`,
+        values
+      );
+
+      if (result.rowCount === 0) {
+        return res.status(404).json({ error: 'Service not found' });
+      }
+
+      const service = result.rows[0];
+      res.json({
+        id: service.id,
+        hostId: service.host_id,
+        name: service.name,
+        description: service.description,
+        category: service.category,
+        durationMinutes: service.duration_minutes,
+        basePrice: service.base_price,
+        maxParticipants: service.max_participants,
+        isActive: service.is_active,
+        createdAt: service.created_at,
+        updatedAt: service.updated_at,
+      });
+    } catch (error) {
+      console.error('Error updating service:', error);
+      res.status(500).json({ error: 'Failed to update service' });
+    }
+  });
+
+  // Delete single service
+  router.delete('/services/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const result = await pool.query(`DELETE FROM services WHERE id = $1`, [id]);
+
+      if (result.rowCount === 0) {
+        return res.status(404).json({ error: 'Service not found' });
+      }
+
+      res.json({ message: 'Service deleted' });
+    } catch (error) {
+      console.error('Error deleting service:', error);
+      res.status(500).json({ error: 'Failed to delete service' });
+    }
+  });
+
+  // Bulk delete services
+  router.post('/services/bulk/delete', async (req: Request, res: Response) => {
+    try {
+      const { ids } = req.body;
+
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ error: 'ids array required' });
+      }
+
+      const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
+      const result = await pool.query(
+        `DELETE FROM services WHERE id IN (${placeholders})`,
+        ids
+      );
+
+      res.json({
+        message: `${result.rowCount} services deleted`,
+        count: result.rowCount,
+      });
+    } catch (error) {
+      console.error('Error bulk deleting services:', error);
+      res.status(500).json({ error: 'Failed to delete services' });
+    }
+  });
+
+  // Toggle service status
+  router.patch('/services/:id/status', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { isActive } = req.body;
+
+      if (isActive === undefined) {
+        return res.status(400).json({ error: 'isActive required' });
+      }
+
+      const now = new Date().toISOString();
+      const result = await pool.query(
+        `UPDATE services SET is_active = $1, updated_at = $2 WHERE id = $3 RETURNING *`,
+        [isActive, now, id]
+      );
+
+      if (result.rowCount === 0) {
+        return res.status(404).json({ error: 'Service not found' });
+      }
+
+      const service = result.rows[0];
+      res.json({
+        id: service.id,
+        hostId: service.host_id,
+        name: service.name,
+        description: service.description,
+        category: service.category,
+        durationMinutes: service.duration_minutes,
+        basePrice: service.base_price,
+        maxParticipants: service.max_participants,
+        isActive: service.is_active,
+        createdAt: service.created_at,
+        updatedAt: service.updated_at,
+      });
+    } catch (error) {
+      console.error('Error toggling service status:', error);
+      res.status(500).json({ error: 'Failed to toggle service status' });
+    }
+  });
+
   return router;
 }
 

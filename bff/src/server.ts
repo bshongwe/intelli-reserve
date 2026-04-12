@@ -1,13 +1,29 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { Pool } from 'pg';
 import bookingRoutes from './routes/booking.routes';
 import dashboardRoutes from './routes/dashboard.routes';
+import createServiceRoutes from './routes/services.routes';
+import createAnalyticsRoutes from './routes/analytics.routes';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 4000;
+
+// Database connection pool
+const pool = new Pool({
+  user: process.env.DB_USER || 'postgres',
+  password: process.env.DB_PASSWORD || 'postgres',
+  host: process.env.DB_HOST || 'localhost',
+  port: parseInt(process.env.DB_PORT || '5432'),
+  database: process.env.DB_NAME || 'intelli_reserve',
+});
+
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle client', err);
+});
 
 app.use(cors());
 app.use(express.json());
@@ -20,6 +36,8 @@ app.get('/health', (req, res) => {
 // Routes
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/services', createServiceRoutes(pool));
+app.use('/api/analytics', createAnalyticsRoutes(pool));
 
 // Global error handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

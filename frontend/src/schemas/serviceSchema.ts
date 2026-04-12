@@ -24,7 +24,7 @@ export const serviceSchema = z.object({
     .number()
     .min(1, "At least 1 participant required")
     .max(1000, "Maximum 1000 participants"),
-  isActive: z.boolean().default(true),
+  isActive: z.boolean(),
 });
 
 export type ServiceFormData = z.infer<typeof serviceSchema>;

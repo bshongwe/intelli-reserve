@@ -54,14 +54,14 @@ export async function initializeGRPCClients(): Promise<void> {
     });
 
     // Get gRPC service descriptors
-    const bookingGrpcObj = grpc.loadPackageDefinition(bookingPackageDef);
-    const analyticsGrpcObj = grpc.loadPackageDefinition(analyticsPackageDef);
-    const servicesGrpcObj = grpc.loadPackageDefinition(servicesPackageDef);
+    const bookingGrpcObj = grpc.loadPackageDefinition(bookingPackageDef) as any;
+    const analyticsGrpcObj = grpc.loadPackageDefinition(analyticsPackageDef) as any;
+    const servicesGrpcObj = grpc.loadPackageDefinition(servicesPackageDef) as any;
 
     // Create clients
-    const BookingService = (bookingGrpcObj.intelli_reserve.booking as any).BookingService;
-    const AnalyticsService = (analyticsGrpcObj.intelli_reserve.analytics as any).AnalyticsService;
-    const ServicesManagement = (servicesGrpcObj.intelli_reserve.services as any).ServicesManagement;
+    const BookingService = bookingGrpcObj.intelli_reserve.booking.BookingService;
+    const AnalyticsService = analyticsGrpcObj.intelli_reserve.analytics.AnalyticsService;
+    const ServicesManagement = servicesGrpcObj.intelli_reserve.services.ServicesManagement;
 
     bookingClient = new BookingService(BACKEND_URL, grpc.credentials.createInsecure());
     analyticsClient = new AnalyticsService(BACKEND_URL, grpc.credentials.createInsecure());

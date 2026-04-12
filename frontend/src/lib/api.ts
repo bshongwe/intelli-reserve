@@ -79,9 +79,19 @@ export interface DashboardMetrics {
 }
 
 // Error handler
-function handleError(error: any): never {
+function handleError(error: unknown, status?: number, statusText?: string): never {
   console.error('API Error:', error);
-  const message = error?.message || 'An error occurred';
+  let message = 'An error occurred';
+  
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    const msg = (error as { message: unknown }).message;
+    message = typeof msg === 'string' ? msg : 'Unknown error';
+  } else if (typeof error === 'string') {
+    message = error;
+  } else if (status) {
+    message = `${status} ${statusText || 'Error'}`;
+  }
+  
   throw new Error(message);
 }
 
@@ -92,20 +102,40 @@ async function apiCall<T>(
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
   
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-  });
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    handleError(error);
+    if (!response.ok) {
+      const text = await response.text();
+      let error: unknown = {};
+      
+      try {
+        error = JSON.parse(text);
+      } catch {
+        error = text || 'Unknown error';
+      }
+      
+      handleError(error, response.status, response.statusText);
+    }
+
+    const text = await response.text();
+    if (!text) {
+      return [] as T;
+    }
+    
+    return JSON.parse(text) as T;
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('API Error')) {
+      throw err;
+    }
+    handleError(err);
   }
-
-  return response.json();
 }
 
 // Services API
@@ -122,7 +152,7 @@ export const servicesAPI = {
    */
   createService: async (
     hostId: string,
-    data: Omit<Service, 'id' | 'hostId' | 'createdAt' | 'updatedAt'>
+    data: CreateServiceInput
   ): Promise<Service> => {
     return apiCall(`/services?hostId=${hostId}`, {
       method: 'POST',
@@ -135,7 +165,7 @@ export const servicesAPI = {
    */
   updateService: async (
     serviceId: string,
-    data: Partial<Omit<Service, 'id' | 'hostId' | 'createdAt' | 'updatedAt'>>
+    data: UpdateServiceInput
   ): Promise<Service> => {
     return apiCall(`/services/${serviceId}`, {
       method: 'PUT',
@@ -284,6 +314,11 @@ export interface UserProfile {
   updatedAt: string;
 }
 
+// Type aliases for cleaner API signatures
+export type CreateServiceInput = Omit<Service, 'id' | 'hostId' | 'createdAt' | 'updatedAt'>;
+export type UpdateServiceInput = Partial<CreateServiceInput>;
+export type UpdateUserProfileInput = Partial<Omit<UserProfile, 'id' | 'hostId' | 'createdAt' | 'updatedAt'>>;
+
 export const userAPI = {
   /**
    * Get user profile
@@ -297,7 +332,7 @@ export const userAPI = {
    */
   updateUserProfile: async (
     hostId: string,
-    data: Partial<Omit<UserProfile, 'id' | 'hostId' | 'createdAt' | 'updatedAt'>>
+    data: UpdateUserProfileInput
   ): Promise<UserProfile> => {
     return apiCall(`/users/profile?hostId=${hostId}`, {
       method: 'PUT',

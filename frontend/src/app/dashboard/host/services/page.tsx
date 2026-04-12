@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Edit2, Trash2, Clock, Users, Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,6 +22,7 @@ import { useServiceFilters } from "@/hooks/useServiceFilters";
 import { useServiceSelection } from "@/hooks/useServiceSelection";
 import { ServiceFilters } from "@/components/services/ServiceFilters";
 import { BulkActionsBar } from "@/components/services/BulkActionsBar";
+import { serviceSchema, type ServiceFormData } from "@/schemas/serviceSchema";
 
 interface Service {
   id: string;
@@ -75,15 +78,30 @@ export default function HostServicesPage() {
   const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
-  const [formData, setFormData] = useState<Partial<Service>>({
-    name: "",
-    description: "",
-    durationMinutes: 60,
-    basePrice: 1000,
-    maxParticipants: 1,
-    isActive: true,
-    category: "Photography",
+
+  // React Hook Form
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    reset,
+    setValue,
+    watch,
+  } = useForm<ServiceFormData>({
+    resolver: zodResolver(serviceSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      durationMinutes: 60,
+      basePrice: 1000,
+      maxParticipants: 1,
+      isActive: true,
+      category: "Photography",
+    },
   });
+
+  const isActive = watch("isActive");
+  const category = watch("category");
 
   // Fetch services
   const { data: services = mockServices } = useQuery({

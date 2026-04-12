@@ -19,7 +19,7 @@ export default function BookPage() {
 
   const bookingMutation = useMutation({
     mutationFn: async (data: any) => {
-      const res = await axios.post("/api/bff/bookings", data);
+      const res = await axios.post("/api/bookings", data);
       return res.data;
     },
     onSuccess: (data) => {
@@ -42,10 +42,14 @@ export default function BookPage() {
   const handleBook = () => {
     if (!selectedDate || !inventoryId) return;
     bookingMutation.mutate({
-      inventoryId,
-      slotStart: selectedDate.toISOString(),
-      userId: "user_123",
-      tenantId: "tenant_1",
+      serviceId: inventoryId,  // Use inventoryId as serviceId
+      timeSlotId: `slot-${Math.random().toString(36).substring(2, 11)}`,  // Generate placeholder timeSlotId
+      hostId: "host-001",  // Placeholder hostId
+      clientName: "Client User",  // Placeholder clientName
+      clientEmail: "client@example.com",  // Placeholder clientEmail
+      clientPhone: "+1234567890",  // Placeholder clientPhone
+      numberOfParticipants: 1,
+      notes: `Booking for ${selectedDate?.toDateString()}`,
     });
   };
 

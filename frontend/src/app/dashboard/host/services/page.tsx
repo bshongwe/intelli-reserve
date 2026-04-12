@@ -1,13 +1,16 @@
 "use client";
-/* eslint-disable no-nested-ternary */
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Edit2, Trash2, Clock, Users } from "lucide-react";
+import { Plus, Edit2, Trash2, Clock, Users, Calendar as CalendarIcon, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,16 +18,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
+import { useServiceFilters } from "@/hooks/useServiceFilters";
+import { useServiceSelection } from "@/hooks/useServiceSelection";
+import { ServiceFilters } from "@/components/services/ServiceFilters";
+import { BulkActionsBar } from "@/components/services/BulkActionsBar";
+import { serviceSchema, type ServiceFormData } from "@/schemas/serviceSchema";
 
-interface Service {
+interface Service extends ServiceFormData {
   id: string;
-  name: string;
-  description: string;
-  durationMinutes: number;
-  basePrice: number;
-  maxParticipants: number;
-  isActive: boolean;
-  category: string;
   createdAt: string;
 }
 
@@ -37,7 +38,7 @@ const mockServices: Service[] = [
     basePrice: 2500,
     maxParticipants: 1,
     isActive: true,
-    category: "Photography",
+    category: "Photography" as const,
     createdAt: "2026-01-15",
   },
   {
@@ -48,7 +49,7 @@ const mockServices: Service[] = [
     basePrice: 1800,
     maxParticipants: 1,
     isActive: true,
-    category: "Consulting",
+    category: "Consulting" as const,
     createdAt: "2026-02-01",
   },
   {
@@ -59,35 +60,67 @@ const mockServices: Service[] = [
     basePrice: 850,
     maxParticipants: 12,
     isActive: false,
-    category: "Workshop",
+    category: "Workshop" as const,
     createdAt: "2026-03-10",
   },
 ];
 
 export default function HostServicesPage() {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
-  const [formData, setFormData] = useState<Partial<Service>>({
-    name: "",
-    description: "",
-    durationMinutes: 60,
-    basePrice: 1000,
-    maxParticipants: 1,
-    isActive: true,
-    category: "Photography",
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    reset,
+    setValue,
+    control,
+  } = useForm<ServiceFormData>({
+    resolver: zodResolver(serviceSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      durationMinutes: 60,
+      basePrice: 1000,
+      maxParticipants: 1,
+      isActive: true,
+      category: "Photography",
+    },
   });
 
-  // Fetch services (replace with real BFF call later)
+  // Fetch services
   const { data: services = mockServices } = useQuery({
     queryKey: ["host-services"],
-    queryFn: async () => mockServices, // Replace with axios.get("/api/bff/host/services")
+    queryFn: async () => mockServices,
   });
 
+  // Filter and search hook
+  const {
+    searchTerm,
+    setSearchTerm,
+    categoryFilter,
+    setCategoryFilter,
+    statusFilter,
+    setStatusFilter,
+    filteredServices,
+  } = useServiceFilters(services);
+
+  // Selection hook for bulk actions
+  const {
+    selectedIds,
+    toggleSelect,
+    toggleSelectAll,
+    clearSelection,
+    isAllSelected,
+  } = useServiceSelection();
+
+  // Mutations
   const createOrUpdateMutation = useMutation({
-    mutationFn: async (service: Partial<Service>) => {
-      // Simulate API call
+    mutationFn: async (service: ServiceFormData) => {
       await new Promise((resolve) => setTimeout(resolve, 600));
       return service;
     },
@@ -99,198 +132,337 @@ export default function HostServicesPage() {
       });
       setIsAddDialogOpen(false);
       setEditingService(null);
-      resetForm();
+      reset();
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to save service. Please try again.",
+        variant: "destructive",
+      });
     },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (ids: string[]) => {
       await new Promise((resolve) => setTimeout(resolve, 400));
-      return id;
+      return ids;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["host-services"] });
-      toast({ title: "Service Deleted", variant: "destructive" });
+      toast({ title: "Services Deleted", variant: "destructive" });
+      clearSelection();
     },
   });
 
-  const resetForm = () => {
-    setFormData({
-      name: "",
-      description: "",
-      durationMinutes: 60,
-      basePrice: 1000,
-      maxParticipants: 1,
-      isActive: true,
-      category: "Photography",
-    });
-  };
+  const bulkActivateMutation = useMutation({
+    mutationFn: async () => {
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      return selectedIds;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["host-services"] });
+      toast({ title: `${selectedIds.length} services activated` });
+      clearSelection();
+    },
+  });
+
+  const bulkDeactivateMutation = useMutation({
+    mutationFn: async () => {
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      return selectedIds;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["host-services"] });
+      toast({ title: `${selectedIds.length} services deactivated` });
+      clearSelection();
+    },
+  });
 
   const openEdit = (service: Service) => {
     setEditingService(service);
-    setFormData(service);
+    setValue("name", service.name);
+    setValue("description", service.description);
+    setValue("category", service.category);
+    setValue("durationMinutes", service.durationMinutes);
+    setValue("basePrice", service.basePrice);
+    setValue("maxParticipants", service.maxParticipants);
+    setValue("isActive", service.isActive);
     setIsAddDialogOpen(true);
   };
 
-  const getButtonText = () => {
-    if (createOrUpdateMutation.isPending) return "Saving...";
-    return editingService ? "Update Service" : "Create Service";
-  };
-
-  const handleSubmit = () => {
-    if (!formData.name?.trim()) {
-      toast({ title: "Error", description: "Service name is required", variant: "destructive" });
-      return;
-    }
-    createOrUpdateMutation.mutate({ ...formData, id: editingService?.id });
+  const onSubmit = (data: ServiceFormData) => {
+    createOrUpdateMutation.mutate(data);
   };
 
   return (
     <div className="space-y-6 sm:space-y-8 py-4 sm:py-6 px-3 sm:px-4 md:px-6">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="min-w-0">
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">My Services</h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-1">Manage your offerings and availability</p>
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button 
-              onClick={() => { 
-                setEditingService(null); 
-                resetForm(); 
-              }}
-              size="sm"
-              className="gap-2 text-xs sm:text-sm w-full sm:w-auto"
-            >
-              <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              Add Service
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl overflow-y-auto max-h-[90vh] mx-3">
-            <DialogHeader className="text-left">
-              <DialogTitle className="text-lg sm:text-xl">{editingService ? "Edit Service" : "Create New Service"}</DialogTitle>
-              <DialogDescription className="text-xs sm:text-sm">
-                {editingService ? "Update your service details" : "Define a new service that customers can book"}
-              </DialogDescription>
-            </DialogHeader>
+        <div className="flex gap-3 w-full sm:w-auto">
+          <Button
+            variant="outline"
+            onClick={() => router.push("/dashboard/host/services/calendar")}
+            size="sm"
+            className="gap-2 text-xs sm:text-sm flex-1 sm:flex-none"
+          >
+            <CalendarIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            Calendar
+          </Button>
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button
+                onClick={() => {
+                  setEditingService(null);
+                  reset();
+                }}
+                size="sm"
+                className="gap-2 text-xs sm:text-sm flex-1 sm:flex-none"
+              >
+                <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                Add Service
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl overflow-y-auto max-h-[90vh] mx-3">
+              <DialogHeader className="text-left">
+                <DialogTitle className="text-lg sm:text-xl">
+                  {editingService ? "Edit Service" : "Create New Service"}
+                </DialogTitle>
+                <DialogDescription className="text-xs sm:text-sm">
+                  {editingService
+                    ? "Update your service details"
+                    : "Define a new service that customers can book"}
+                </DialogDescription>
+              </DialogHeader>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-xs sm:text-sm">Service Name</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g. Portrait Photography Session"
-                  className="text-xs sm:text-sm"
-                />
-              </div>
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                  {/* Service Name */}
+                  <div className="space-y-2">
+                    <Label htmlFor="name" className="text-xs sm:text-sm">
+                      Service Name *
+                    </Label>
+                    <Input
+                      id="name"
+                      {...register("name")}
+                      placeholder="e.g. Portrait Photography Session"
+                      className="text-xs sm:text-sm"
+                      aria-invalid={!!errors.name}
+                    />
+                    {errors.name && (
+                      <div className="flex items-center gap-1 text-xs text-destructive">
+                        <AlertCircle className="h-3 w-3" />
+                        {errors.name.message}
+                      </div>
+                    )}
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="category" className="text-xs sm:text-sm">Category</Label>
-                <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v })}>
-                  <SelectTrigger id="category" className="text-xs sm:text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Photography">Photography</SelectItem>
-                    <SelectItem value="Consulting">Consulting</SelectItem>
-                    <SelectItem value="Workshop">Workshop</SelectItem>
-                    <SelectItem value="Coaching">Coaching</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                  {/* Category */}
+                  <div className="space-y-2">
+                    <Label htmlFor="category" className="text-xs sm:text-sm">
+                      Category *
+                    </Label>
+                    <Controller
+                      name="category"
+                      control={control}
+                      render={({ field }) => (
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <SelectTrigger id="category" className="text-xs sm:text-sm" aria-invalid={!!errors.category}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Photography">Photography</SelectItem>
+                            <SelectItem value="Consulting">Consulting</SelectItem>
+                            <SelectItem value="Workshop">Workshop</SelectItem>
+                            <SelectItem value="Coaching">Coaching</SelectItem>
+                            <SelectItem value="Other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                    {errors.category && (
+                      <div className="flex items-center gap-1 text-xs text-destructive">
+                        <AlertCircle className="h-3 w-3" />
+                        {errors.category.message}
+                      </div>
+                    )}
+                  </div>
 
-              <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="description" className="text-xs sm:text-sm">Description</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  rows={4}
-                  placeholder="Describe what customers will receive..."
-                  className="text-xs sm:text-sm resize-none"
-                />
-              </div>
+                  {/* Description */}
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label htmlFor="description" className="text-xs sm:text-sm">
+                      Description *
+                    </Label>
+                    <Textarea
+                      id="description"
+                      {...register("description")}
+                      rows={4}
+                      placeholder="Describe what customers will receive..."
+                      className="text-xs sm:text-sm resize-none"
+                      aria-invalid={!!errors.description}
+                    />
+                    {errors.description && (
+                      <div className="flex items-center gap-1 text-xs text-destructive">
+                        <AlertCircle className="h-3 w-3" />
+                        {errors.description.message}
+                      </div>
+                    )}
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="duration" className="text-xs sm:text-sm">Duration (minutes)</Label>
-                <Input
-                  id="duration"
-                  type="number"
-                  value={formData.durationMinutes}
-                  onChange={(e) => setFormData({ ...formData, durationMinutes: Number.parseInt(e.target.value) || 0 })}
-                  className="text-xs sm:text-sm"
-                />
-              </div>
+                  {/* Duration */}
+                  <div className="space-y-2">
+                    <Label htmlFor="duration" className="text-xs sm:text-sm">
+                      Duration (minutes) *
+                    </Label>
+                    <Input
+                      id="duration"
+                      type="number"
+                      {...register("durationMinutes", { valueAsNumber: true })}
+                      className="text-xs sm:text-sm"
+                      aria-invalid={!!errors.durationMinutes}
+                    />
+                    {errors.durationMinutes && (
+                      <div className="flex items-center gap-1 text-xs text-destructive">
+                        <AlertCircle className="h-3 w-3" />
+                        {errors.durationMinutes.message}
+                      </div>
+                    )}
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="price" className="text-xs sm:text-sm">Base Price (R)</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  value={formData.basePrice}
-                  onChange={(e) => setFormData({ ...formData, basePrice: Number.parseFloat(e.target.value) || 0 })}
-                  className="text-xs sm:text-sm"
-                />
-              </div>
+                  {/* Price */}
+                  <div className="space-y-2">
+                    <Label htmlFor="price" className="text-xs sm:text-sm">
+                      Base Price (R) *
+                    </Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      {...register("basePrice", { valueAsNumber: true })}
+                      className="text-xs sm:text-sm"
+                      aria-invalid={!!errors.basePrice}
+                    />
+                    {errors.basePrice && (
+                      <div className="flex items-center gap-1 text-xs text-destructive">
+                        <AlertCircle className="h-3 w-3" />
+                        {errors.basePrice.message}
+                      </div>
+                    )}
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="participants" className="text-xs sm:text-sm">Max Participants</Label>
-                <Input
-                  id="participants"
-                  type="number"
-                  value={formData.maxParticipants}
-                  onChange={(e) => setFormData({ ...formData, maxParticipants: Number.parseInt(e.target.value) || 1 })}
-                  className="text-xs sm:text-sm"
-                />
-              </div>
+                  {/* Max Participants */}
+                  <div className="space-y-2">
+                    <Label htmlFor="participants" className="text-xs sm:text-sm">
+                      Max Participants *
+                    </Label>
+                    <Input
+                      id="participants"
+                      type="number"
+                      {...register("maxParticipants", { valueAsNumber: true })}
+                      className="text-xs sm:text-sm"
+                      aria-invalid={!!errors.maxParticipants}
+                    />
+                    {errors.maxParticipants && (
+                      <div className="flex items-center gap-1 text-xs text-destructive">
+                        <AlertCircle className="h-3 w-3" />
+                        {errors.maxParticipants.message}
+                      </div>
+                    )}
+                  </div>
 
-              <div className="flex items-center gap-3 pt-2 sm:col-span-2">
-                <Switch
-                  checked={formData.isActive}
-                  onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
-                />
-                <div>
-                  <p className="text-xs sm:text-sm font-medium">Active</p>
-                  <p className="text-xs text-muted-foreground">Customers can see and book this service</p>
+                  {/* Active Switch */}
+                  <div className="flex items-center gap-3 pt-2 sm:col-span-2">
+                    <Controller
+                      name="isActive"
+                      control={control}
+                      render={({ field }) => (
+                        <Switch checked={field.value} onCheckedChange={field.onChange} />
+                      )}
+                    />
+                    <div>
+                      <p className="text-xs sm:text-sm font-medium">Active</p>
+                      <p className="text-xs text-muted-foreground">
+                        Customers can see and book this service
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
-              <Button 
-                variant="outline" 
-                onClick={() => setIsAddDialogOpen(false)}
-                size="sm"
-                className="text-xs sm:text-sm"
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleSubmit} 
-                disabled={createOrUpdateMutation.isPending}
-                size="sm"
-                className="text-xs sm:text-sm"
-              >
-                {getButtonText()}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+                {/* Actions */}
+                <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsAddDialogOpen(false)}
+                    size="sm"
+                    className="text-xs sm:text-sm"
+                    disabled={isSubmitting}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting || createOrUpdateMutation.isPending}
+                    size="sm"
+                    className="text-xs sm:text-sm"
+                  >
+                    {createOrUpdateMutation.isPending ? "Saving..." : editingService ? "Update Service" : "Create Service"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
+      {/* Filters */}
+      <ServiceFilters
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        categoryFilter={categoryFilter}
+        onCategoryChange={setCategoryFilter}
+        statusFilter={statusFilter}
+        onStatusChange={setStatusFilter}
+      />
+
+      {/* Bulk Actions Bar */}
+      <BulkActionsBar
+        selectedCount={selectedIds.length}
+        onActivate={() => bulkActivateMutation.mutate()}
+        onDeactivate={() => bulkDeactivateMutation.mutate()}
+        onDelete={() => deleteMutation.mutate(selectedIds)}
+        onClearSelection={clearSelection}
+        isLoading={
+          bulkActivateMutation.isPending ||
+          bulkDeactivateMutation.isPending ||
+          deleteMutation.isPending
+        }
+      />
+
+      {/* Services Table */}
       <Card className="overflow-hidden">
         <CardHeader className="pb-4 sm:pb-6 px-3 sm:px-6">
-          <CardTitle className="text-lg sm:text-xl">Your Services ({services.length})</CardTitle>
-          <CardDescription className="text-xs sm:text-sm">Services that appear in the booking engine</CardDescription>
+          <CardTitle className="text-lg sm:text-xl">Your Services ({filteredServices.length})</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
+            Services that appear in the booking engine
+          </CardDescription>
         </CardHeader>
         <CardContent className="px-3 sm:px-6 pb-4 sm:pb-6">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="text-xs sm:text-sm">
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={isAllSelected(filteredServices.map((s) => s.id))}
+                      onCheckedChange={() =>
+                        toggleSelectAll(filteredServices.map((s) => s.id))
+                      }
+                    />
+                  </TableHead>
                   <TableHead className="min-w-[180px] text-xs">Service</TableHead>
                   <TableHead className="hidden sm:table-cell text-xs">Category</TableHead>
                   <TableHead className="hidden md:table-cell text-xs">Duration</TableHead>
@@ -301,16 +473,26 @@ export default function HostServicesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {services.map((service) => (
+                {filteredServices.map((service) => (
                   <TableRow key={service.id} className="text-xs sm:text-sm">
+                    <TableCell className="py-2 sm:py-4">
+                      <Checkbox
+                        checked={selectedIds.includes(service.id)}
+                        onCheckedChange={() => toggleSelect(service.id)}
+                      />
+                    </TableCell>
                     <TableCell className="py-2 sm:py-4">
                       <div className="min-w-0">
                         <p className="font-medium truncate text-xs sm:text-sm">{service.name}</p>
-                        <p className="text-xs text-muted-foreground line-clamp-1 hidden sm:block">{service.description}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-1 hidden sm:block">
+                          {service.description}
+                        </p>
                       </div>
                     </TableCell>
                     <TableCell className="hidden sm:table-cell py-2 sm:py-4">
-                      <Badge variant="secondary" className="text-xs">{service.category}</Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        {service.category}
+                      </Badge>
                     </TableCell>
                     <TableCell className="hidden md:table-cell py-2 sm:py-4">
                       <div className="flex items-center gap-1 text-xs">
@@ -328,8 +510,8 @@ export default function HostServicesPage() {
                       </div>
                     </TableCell>
                     <TableCell className="py-2 sm:py-4">
-                      <Badge 
-                        variant={service.isActive ? "default" : "secondary"} 
+                      <Badge
+                        variant={service.isActive ? "default" : "secondary"}
                         className="text-xs"
                       >
                         {service.isActive ? "Active" : "Inactive"}
@@ -337,10 +519,10 @@ export default function HostServicesPage() {
                     </TableCell>
                     <TableCell className="text-right py-2 sm:py-4">
                       <div className="flex justify-end gap-1 sm:gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => openEdit(service)}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openEdit(service as Service)}
                           className="p-1 sm:p-2 h-8 w-8 sm:h-auto sm:w-auto"
                         >
                           <Edit2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -349,7 +531,7 @@ export default function HostServicesPage() {
                           variant="outline"
                           size="sm"
                           className="p-1 sm:p-2 h-8 w-8 sm:h-auto sm:w-auto text-destructive hover:text-destructive"
-                          onClick={() => deleteMutation.mutate(service.id)}
+                          onClick={() => deleteMutation.mutate([service.id])}
                         >
                           <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         </Button>
@@ -360,9 +542,11 @@ export default function HostServicesPage() {
               </TableBody>
             </Table>
 
-            {services.length === 0 && (
+            {filteredServices.length === 0 && (
               <div className="text-center py-12 text-xs sm:text-sm text-muted-foreground">
-                No services yet. Click "Add Service" to get started.
+                {services.length === 0
+                  ? "No services yet. Click \"Add Service\" to get started."
+                  : "No services match your filters."}
               </div>
             )}
           </div>

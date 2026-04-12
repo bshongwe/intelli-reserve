@@ -122,7 +122,7 @@ export default function HostDashboard() {
                   <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                   <YAxis tick={{ fontSize: 12 }} />
                   <Tooltip formatter={(value) => [`R${value}`, "Revenue"]} />
-                  <Line type="monotone" dataKey="revenue" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} />
+                  <Line type="monotone" dataKey="revenue" stroke="var(--chart-revenue)" strokeWidth={2} dot={{ r: 4 }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -143,7 +143,7 @@ export default function HostDashboard() {
                   <XAxis dataKey="day" tick={{ fontSize: 12 }} />
                   <YAxis tick={{ fontSize: 12 }} />
                   <Tooltip formatter={(value) => [`${value}%`, "Occupancy"]} />
-                  <Bar dataKey="occupancy" fill="#10b981" radius={8} />
+                  <Bar dataKey="occupancy" fill="var(--chart-occupancy)" radius={8} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

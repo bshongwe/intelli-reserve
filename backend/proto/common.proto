@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+package intelli_reserve.common;
+
+option go_package = "github.com/intelli-reserve/backend/gen/go/common";
+option java_multiple_files = true;
+option java_package = "com.intelli_reserve.common";
+
+// Common message types used across services
+
+message Empty {}
+
+message UUID {
+  string value = 1;
+}
+
+message Timestamp {
+  int64 seconds = 1;
+  int32 nanos = 2;
+}
+
+message Error {
+  int32 code = 1;
+  string message = 2;
+  string details = 3;
+}
+
+message PageInfo {
+  int32 current_page = 1;
+  int32 page_size = 2;
+  int32 total_pages = 3;
+  int64 total_items = 4;
+}
+
+message Service {
+  string id = 1;
+  string host_id = 2;
+  string name = 3;
+  string description = 4;
+  string category = 5;
+  int32 duration_minutes = 6;
+  double base_price = 7;
+  int32 max_participants = 8;
+  bool is_active = 9;
+  string created_at = 10;
+  string updated_at = 11;
+}
+
+message TimeSlot {
+  string id = 1;
+  string service_id = 2;
+  string date = 3;
+  string start_time = 4;
+  string end_time = 5;
+  bool is_available = 6;
+  string created_at = 7;
+  string updated_at = 8;
+}
+
+message Booking {
+  string id = 1;
+  string service_id = 2;
+  string time_slot_id = 3;
+  string host_id = 4;
+  string client_name = 5;
+  string client_email = 6;
+  string client_phone = 7;
+  int32 number_of_participants = 8;
+  string status = 9; // pending, confirmed, cancelled, completed
+  string notes = 10;
+  string created_at = 11;
+  string updated_at = 12;
+}
+
+message User {
+  string id = 1;
+  string email = 2;
+  string name = 3;
+  string role = 4; // host, client, admin
+  string phone = 5;
+  string profile_picture = 6;
+  bool is_active = 7;
+  string created_at = 8;
+  string updated_at = 9;
+}

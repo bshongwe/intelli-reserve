@@ -1,0 +1,122 @@
+syntax = "proto3";
+
+package intelli_reserve.booking;
+
+import "common.proto";
+
+option go_package = "github.com/intelli-reserve/backend/gen/go/booking";
+option java_multiple_files = true;
+option java_package = "com.intelli_reserve.booking";
+
+// Booking Service - handles all booking operations
+
+service BookingService {
+  // Create a new booking
+  rpc CreateBooking(CreateBookingRequest) returns (CreateBookingResponse);
+  
+  // Get booking by ID
+  rpc GetBooking(GetBookingRequest) returns (GetBookingResponse);
+  
+  // Get bookings by host ID
+  rpc GetHostBookings(GetHostBookingsRequest) returns (GetHostBookingsResponse);
+  
+  // Get bookings by client email
+  rpc GetClientBookings(GetClientBookingsRequest) returns (GetClientBookingsResponse);
+  
+  // Update booking status
+  rpc UpdateBookingStatus(UpdateBookingStatusRequest) returns (UpdateBookingStatusResponse);
+  
+  // Cancel booking
+  rpc CancelBooking(CancelBookingRequest) returns (CancelBookingResponse);
+  
+  // Delete booking
+  rpc DeleteBooking(DeleteBookingRequest) returns (DeleteBookingResponse);
+}
+
+// Request/Response messages
+
+message CreateBookingRequest {
+  string service_id = 1;
+  string time_slot_id = 2;
+  string host_id = 3;
+  string client_name = 4;
+  string client_email = 5;
+  string client_phone = 6;
+  int32 number_of_participants = 7;
+  string notes = 8;
+}
+
+message CreateBookingResponse {
+  bool success = 1;
+  intelli_reserve.common.Booking booking = 2;
+  string error_message = 3;
+}
+
+message GetBookingRequest {
+  string booking_id = 1;
+}
+
+message GetBookingResponse {
+  bool success = 1;
+  intelli_reserve.common.Booking booking = 2;
+  string error_message = 3;
+}
+
+message GetHostBookingsRequest {
+  string host_id = 1;
+  string status_filter = 2; // optional: pending, confirmed, cancelled, completed
+  int32 limit = 3;
+  int32 offset = 4;
+}
+
+message GetHostBookingsResponse {
+  bool success = 1;
+  repeated intelli_reserve.common.Booking bookings = 2;
+  int32 total_count = 3;
+  string error_message = 4;
+}
+
+message GetClientBookingsRequest {
+  string client_email = 1;
+  string status_filter = 2; // optional
+  int32 limit = 3;
+  int32 offset = 4;
+}
+
+message GetClientBookingsResponse {
+  bool success = 1;
+  repeated intelli_reserve.common.Booking bookings = 2;
+  int32 total_count = 3;
+  string error_message = 4;
+}
+
+message UpdateBookingStatusRequest {
+  string booking_id = 1;
+  string new_status = 2; // pending, confirmed, cancelled, completed
+}
+
+message UpdateBookingStatusResponse {
+  bool success = 1;
+  intelli_reserve.common.Booking booking = 2;
+  string error_message = 3;
+}
+
+message CancelBookingRequest {
+  string booking_id = 1;
+  string reason = 2; // optional cancellation reason
+}
+
+message CancelBookingResponse {
+  bool success = 1;
+  intelli_reserve.common.Booking booking = 2;
+  string error_message = 3;
+}
+
+message DeleteBookingRequest {
+  string booking_id = 1;
+}
+
+message DeleteBookingResponse {
+  bool success = 1;
+  string error_message = 2;
+}

@@ -10,7 +10,7 @@ export function Header() {
       <div className="flex items-center gap-2">
         <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          Live
+          <span>Live</span>
         </span>
       </div>
       <div className="flex items-center gap-3">

@@ -66,7 +66,7 @@ export default function HostDashboard() {
             <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground shrink-0" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl sm:text-3xl font-bold">82%</div>
+            <div className="text-2xl sm:text-3xl font-bold">{dashboardData?.avgOccupancy || 0}%</div>
             <p className="text-xs text-muted-foreground mt-1">Week average</p>
           </CardContent>
         </Card>
@@ -77,7 +77,7 @@ export default function HostDashboard() {
             <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground shrink-0" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl sm:text-3xl font-bold">96%</div>
+            <div className="text-2xl sm:text-3xl font-bold">{dashboardData?.responseRate || 0}%</div>
             <p className="text-xs text-muted-foreground mt-1">Very responsive</p>
           </CardContent>
         </Card>

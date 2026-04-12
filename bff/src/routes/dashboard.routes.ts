@@ -13,6 +13,8 @@ export interface DashboardMetrics {
   }>;
   upcomingBookings: number;
   totalRevenue: string;
+  avgOccupancy: number;
+  responseRate: number;
 }
 
 export function createDashboardRoutes(pool: Pool): Router {
@@ -66,6 +68,40 @@ export function createDashboardRoutes(pool: Pool): Router {
         [hostId]
       );
 
+      // Get average occupancy (last 7 days)
+      const occupancyResult = await pool.query(
+        `SELECT ROUND(
+          COALESCE(
+            SUM(booked_count)::float / NULLIF(COUNT(*), 0) * 100, 
+            0
+          )
+        )::integer as avg_occupancy
+        FROM time_slots
+        WHERE service_id IN (
+          SELECT id FROM services WHERE host_id = $1
+        )
+        AND slot_date >= CURRENT_DATE - INTERVAL '7 days'
+        AND slot_date < CURRENT_DATE + INTERVAL '1 day'`,
+        [hostId]
+      );
+
+      // Get response rate (last 30 days)
+      const responseRateResult = await pool.query(
+        `SELECT ROUND(
+          COALESCE(
+            COUNT(CASE WHEN status IN ('CONFIRMED', 'COMPLETED') THEN 1 END)::float 
+            / NULLIF(COUNT(*), 0) * 100, 
+            0
+          )
+        )::integer as response_rate
+        FROM bookings
+        WHERE service_id IN (
+          SELECT id FROM services WHERE host_id = $1
+        )
+        AND created_at >= CURRENT_DATE - INTERVAL '30 days'`,
+        [hostId]
+      );
+
       const dashboardMetrics: DashboardMetrics = {
         revenueData: revenueResult.rows.map(row => ({
           month: row.month,
@@ -75,6 +111,8 @@ export function createDashboardRoutes(pool: Pool): Router {
         occupancyData,
         upcomingBookings: serviceCountResult.rows[0]?.count || 0,
         totalRevenue: `R${(totalRevenueResult.rows[0]?.total || 0).toLocaleString()}`,
+        avgOccupancy: occupancyResult.rows[0]?.avg_occupancy || 0,
+        responseRate: responseRateResult.rows[0]?.response_rate || 0,
       };
 
       res.json(dashboardMetrics);

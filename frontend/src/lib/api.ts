@@ -76,6 +76,8 @@ export interface DashboardMetrics {
   }>;
   upcomingBookings: number;
   totalRevenue: string;
+  avgOccupancy: number;
+  responseRate: number;
 }
 
 // Error handler

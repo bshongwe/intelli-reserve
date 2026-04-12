@@ -23,13 +23,21 @@ export default function Home() {
           >
             Get Started →
           </a>
+          
+          {/* Scroll Indicator */}
+          <div className="mt-12 sm:mt-16 flex flex-col items-center gap-2 animate-bounce">
+            <p className="text-xs sm:text-sm text-muted-foreground font-medium">Scroll to explore more</p>
+            <svg className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+            </svg>
+          </div>
         </div>
       </section>
 
       {/* Features Section */}
       <section className="py-16 sm:py-24 px-4 sm:px-6 max-w-6xl mx-auto">
         <div className="text-center mb-12 sm:mb-16">
-          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-3">Powerful Features</h2>
+          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-3">IntelliReserve Features</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto text-sm sm:text-base">Everything you need to manage bookings, payments, and customer relationships</p>
         </div>
         
@@ -93,7 +101,7 @@ export default function Home() {
       {/* Pricing Section */}
       <section className="py-16 sm:py-24 px-4 sm:px-6 max-w-6xl mx-auto">
         <div className="text-center mb-12 sm:mb-16">
-          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-3">Simple Pricing</h2>
+          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-3">Subscription Plans</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto text-sm sm:text-base">Transparent pricing with no hidden fees. Scale as you grow.</p>
         </div>
 

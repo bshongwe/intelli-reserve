@@ -66,7 +66,7 @@ export function createAnalyticsRoutes(pool: Pool): Router {
   const router = Router();
 
   // Get analytics dashboard data
-  router.get('/analytics', async (req: Request, res: Response) => {
+  router.get('/', async (req: Request, res: Response) => {
     try {
       const hostId = req.query.hostId as string;
       const timeRange = (req.query.timeRange as '1m' | '3m' | '6m' | '1y') || '6m';
@@ -161,7 +161,7 @@ export function createAnalyticsRoutes(pool: Pool): Router {
   });
 
   // Get dashboard metrics
-  router.get('/dashboard/metrics', async (req: Request, res: Response) => {
+  router.get('/metrics', async (req: Request, res: Response) => {
     try {
       const hostId = req.query.hostId as string;
 

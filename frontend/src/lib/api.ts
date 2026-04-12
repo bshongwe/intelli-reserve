@@ -100,9 +100,17 @@ function handleError(error: unknown, status?: number, statusText?: string): neve
   console.error('API Error:', error);
   let message = 'An error occurred';
   
-  if (typeof error === 'object' && error !== null && 'message' in error) {
-    const msg = (error as { message: unknown }).message;
-    message = typeof msg === 'string' ? msg : 'Unknown error';
+  if (typeof error === 'object' && error !== null) {
+    // Check for BFF error format: { error: "...", details: "..." }
+    const errObj = error as Record<string, unknown>;
+    if ('error' in errObj && typeof errObj.error === 'string') {
+      message = errObj.error;
+      if ('details' in errObj && typeof errObj.details === 'string') {
+        message = `${message}: ${errObj.details}`;
+      }
+    } else if ('message' in errObj && typeof errObj.message === 'string') {
+      message = errObj.message;
+    }
   } else if (typeof error === 'string') {
     message = error;
   } else if (status) {

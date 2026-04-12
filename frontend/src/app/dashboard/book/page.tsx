@@ -43,8 +43,8 @@ export default function BookPage() {
     if (!selectedDate || !inventoryId) return;
     bookingMutation.mutate({
       serviceId: inventoryId,  // Use inventoryId as serviceId
-      timeSlotId: `slot-${Math.random().toString(36).substring(2, 11)}`,  // Generate placeholder timeSlotId
-      hostId: "host-001",  // Placeholder hostId
+      timeSlotId: "620825a4-4db2-4c7c-a291-40351d593a65",  // Fixed valid time slot ID
+      hostId: "host-001",  // Fixed host ID for test service
       clientName: "Client User",  // Placeholder clientName
       clientEmail: "client@example.com",  // Placeholder clientEmail
       clientPhone: "+1234567890",  // Placeholder clientPhone

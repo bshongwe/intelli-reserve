@@ -20,7 +20,9 @@ export function Header() {
           <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-primary rounded-full" />
         </Button>
         <Button variant="outline" className="gap-2">
-          <span className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-violet-500 flex items-center justify-center text-white text-xs font-bold">U</span>
+          <span className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-violet-500 flex items-center justify-center text-white text-xs font-bold">
+            U
+          </span>{" "}
           Profile
         </Button>
       </div>

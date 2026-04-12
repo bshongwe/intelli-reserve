@@ -3,7 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { Pool } from 'pg';
 import bookingRoutes from './routes/booking.routes';
-import dashboardRoutes from './routes/dashboard.routes';
+import createDashboardRoutes from './routes/dashboard.routes';
 import createServiceRoutes from './routes/services.routes';
 import createAnalyticsRoutes from './routes/analytics.routes';
 import createUserRoutes from './routes/users.routes';
@@ -41,7 +41,7 @@ app.get('/health', (req, res) => {
 
 // Routes
 app.use('/api/bookings', bookingRoutes);
-app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/dashboard', createDashboardRoutes(pool));
 app.use('/api/services', createServiceRoutes(pool));
 app.use('/api/analytics', createAnalyticsRoutes(pool));
 app.use('/api/users', createUserRoutes(pool));

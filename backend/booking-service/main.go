@@ -1,14 +1,19 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/google/uuid"
+	pb "github.com/intelli-reserve/backend/gen/go/booking"
+	"github.com/jackc/pgx/v5"
+	"google.golang.org/grpc"
 )
 
 type CreateBookingRequest struct {
@@ -24,21 +29,67 @@ type CreateBookingResponse struct {
 	Message   string `json:"message"`
 }
 
-type server struct {
-	// Backend server placeholder
+var dbConn *pgx.Conn
+
+func main() {
+	// Connect to database
+	connStr := "postgres://postgres:postgres@localhost:5432/intelli_reserve"
+	conn, err := pgx.Connect(context.Background(), connStr)
+	if err != nil {
+		log.Fatalf("Unable to connect to database: %v", err)
+	}
+	defer conn.Close(context.Background())
+
+	dbConn = conn
+	log.Printf("✅ Connected to PostgreSQL database")
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	// Start HTTP REST API server (port 8080)
+	go startHTTPServer()
+
+	// Start gRPC server (port 8090)
+	go startGRPCServer()
+
+	// Wait for shutdown signal
+	<-sigChan
+	log.Printf("🛑 Shutdown signal received")
 }
 
-func (s *server) CreateBooking(req *CreateBookingRequest) (*CreateBookingResponse, error) {
-	log.Printf("Received booking request: %v", req)
+// startHTTPServer starts the REST API server on port 8080
+func startHTTPServer() {
+	http.HandleFunc("/health", healthHandler)
+	http.HandleFunc("/v1/bookings", createBookingHandler)
 
-	bookingID := "booking_" + uuid.New().String()[:12]
+	port := ":8080"
+	log.Printf("🚀 REST API server running on %s", port)
 
-	return &CreateBookingResponse{
-		BookingID: bookingID,
-		Status:    "INITIATED",
-		Message:   "Booking created successfully",
-	}, nil
+	if err := http.ListenAndServe(port, nil); err != nil && err != http.ErrServerClosed {
+		log.Fatalf("HTTP Server error: %v", err)
+	}
 }
+
+// startGRPCServer starts the gRPC server on port 8090
+func startGRPCServer() {
+	listener, err := net.Listen("tcp", ":8090")
+	if err != nil {
+		log.Fatalf("Failed to listen for gRPC: %v", err)
+	}
+
+	s := grpc.NewServer()
+	bookingServer := NewBookingServiceServer(dbConn)
+	pb.RegisterBookingServiceServer(s, bookingServer)
+
+	log.Printf("🚀 gRPC server running on :8090")
+
+	if err := s.Serve(listener); err != nil {
+		log.Fatalf("gRPC Server error: %v", err)
+	}
+}
+
+
+// HTTP Handlers (for backward compatibility)
 
 func createBookingHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -78,6 +129,7 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{
 		"status":  "healthy",
 		"service": "booking-service",
+		"grpc":    "available on :8090",
 	})
 }
 

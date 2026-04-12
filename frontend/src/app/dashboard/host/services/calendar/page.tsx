@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,36 +27,172 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import type { TimeSlot } from "@/schemas/serviceSchema";
+import { servicesAPI, timeSlotsAPI } from "@/lib/api";
 import { DraggableTimeSlot } from "@/components/calendar/DraggableTimeSlot";
 import { RecurringSlotGenerator } from "@/components/calendar/RecurringSlotGenerator";
 
-const services = [
-  { id: "svc-001", name: "Portrait Photography Session", duration: 90, price: 2500 },
-  { id: "svc-002", name: "Business Consulting Call", duration: 60, price: 1800 },
-  { id: "svc-003", name: "Group Workshop: Digital Marketing", duration: 180, price: 850 },
-];
-
-// Mock time slots per date
-const mockSlotsByDate: Record<string, TimeSlot[]> = {
-  "2026-01-20": [
-    { id: "slot-1", date: new Date("2026-01-20"), startTime: "09:00", endTime: "10:30", serviceId: "svc-001", isAvailable: true, isRecurring: false },
-    { id: "slot-2", date: new Date("2026-01-20"), startTime: "11:00", endTime: "12:00", serviceId: "svc-001", isAvailable: true, isRecurring: false },
-    { id: "slot-3", date: new Date("2026-01-20"), startTime: "14:00", endTime: "15:30", serviceId: "svc-001", isAvailable: false, isRecurring: false },
-  ],
-  "2026-01-21": [
-    { id: "slot-4", date: new Date("2026-01-21"), startTime: "10:00", endTime: "11:00", serviceId: "svc-002", isAvailable: true, isRecurring: false },
-    { id: "slot-5", date: new Date("2026-01-21"), startTime: "13:00", endTime: "14:00", serviceId: "svc-002", isAvailable: true, isRecurring: false },
-  ],
-};
-
 export default function AvailabilityCalendarPage() {
   const { toast } = useToast();
-  const [date, setDate] = useState<Date | undefined>(new Date("2026-01-20"));
-  const [selectedServiceId, setSelectedServiceId] = useState(services[0].id);
+  const queryClient = useQueryClient();
+  
+  // TODO: Replace with actual auth integration to get real hostId
+  const hostId = "host-001";
+
+  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [selectedServiceId, setSelectedServiceId] = useState<string | undefined>();
   const [isAddingSlot, setIsAddingSlot] = useState(false);
   const [newSlotStart, setNewSlotStart] = useState("09:00");
   const [newSlotEnd, setNewSlotEnd] = useState("10:00");
+
+  // Fetch services
+  const { data: services = [] } = useQuery({
+    queryKey: ["host-services", hostId],
+    queryFn: () => servicesAPI.getHostServices(hostId),
+  });
+
+  // Set first service as default when services load
+  useEffect(() => {
+    if (services.length > 0 && !selectedServiceId) {
+      setSelectedServiceId(services[0].id);
+    }
+  }, [services, selectedServiceId]);
+
+  // Fetch time slots for selected date and service
+  const dateKey = date ? format(date, "yyyy-MM-dd") : "";
+  const { data: apiSlots = [] } = useQuery({
+    queryKey: ["time-slots", selectedServiceId, dateKey],
+    queryFn: () => selectedServiceId && dateKey ? timeSlotsAPI.getTimeSlots(selectedServiceId, dateKey) : Promise.resolve([]),
+    enabled: !!selectedServiceId && !!dateKey,
+  });
+
+  // Transform API slots to schema format (convert slotDate string to date Date object)
+  const filteredSlots = apiSlots.map((slot) => ({
+    ...slot,
+    date: new Date(slot.slotDate),
+  }));
+
+  const selectedService = services.find((s) => s.id === selectedServiceId);
+
+  // Mutation: Add single time slot
+  const addSlotMutation = useMutation({
+    mutationFn: () => {
+      if (!date || !selectedServiceId) {
+        throw new Error("Date and service must be selected");
+      }
+      return timeSlotsAPI.createTimeSlot(
+        selectedServiceId,
+        format(date, "yyyy-MM-dd"),
+        newSlotStart,
+        newSlotEnd
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["time-slots", selectedServiceId, dateKey],
+      });
+      toast({
+        title: "Slot Added",
+        description: `Added slot from ${newSlotStart} to ${newSlotEnd}`,
+      });
+      setIsAddingSlot(false);
+      setNewSlotStart("09:00");
+      setNewSlotEnd("10:00");
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to add slot",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation: Delete time slot
+  const deleteSlotMutation = useMutation({
+    mutationFn: (slotId: string) => timeSlotsAPI.deleteTimeSlot(slotId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["time-slots", selectedServiceId, dateKey],
+      });
+      toast({ title: "Slot Deleted", variant: "destructive" });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete slot",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation: Toggle time slot availability
+  const toggleAvailabilityMutation = useMutation({
+    mutationFn: (slotId: string) => {
+      const slot = filteredSlots.find((s) => s.id === slotId);
+      if (!slot) throw new Error("Slot not found");
+      return timeSlotsAPI.updateTimeSlotAvailability(slotId, !slot.isAvailable);
+    },
+    onSuccess: (_, slotId) => {
+      const slot = filteredSlots.find((s) => s.id === slotId);
+      queryClient.invalidateQueries({
+        queryKey: ["time-slots", selectedServiceId, dateKey],
+      });
+      toast({
+        title: slot?.isAvailable ? "Slot Blocked" : "Slot Unblocked",
+        description: `${slot?.startTime} - ${slot?.endTime}`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update slot availability",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation: Create recurring slots
+  const createRecurringMutation = useMutation({
+    mutationFn: ({
+      startTime,
+      endTime,
+      daysOfWeek,
+      startDate,
+      endDate,
+    }: {
+      startTime: string;
+      endTime: string;
+      daysOfWeek: number[];
+      startDate: Date;
+      endDate?: Date;
+    }) => {
+      if (!selectedServiceId) throw new Error("Service must be selected");
+      return timeSlotsAPI.createRecurringSlots(
+        selectedServiceId,
+        startTime,
+        endTime,
+        daysOfWeek,
+        format(startDate, "yyyy-MM-dd"),
+        endDate ? format(endDate, "yyyy-MM-dd") : undefined
+      );
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({
+        queryKey: ["time-slots", selectedServiceId, dateKey],
+      });
+      toast({
+        title: "Recurring Slots Generated",
+        description: `Created ${data.count} recurring time slots`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create recurring slots",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -63,14 +200,7 @@ export default function AvailabilityCalendarPage() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  // Load slots for selected date
-  const dateKey = date ? format(date, "yyyy-MM-dd") : "";
-  const slotsForDate = mockSlotsByDate[dateKey] || [];
-  const filteredSlots = slotsForDate.filter((s) => s.serviceId === selectedServiceId);
-
-  const selectedService = services.find((s) => s.id === selectedServiceId);
-
-  // Handle drag end
+  // Handle drag end - Note: re-ordering would require additional API endpoint
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
@@ -82,43 +212,30 @@ export default function AvailabilityCalendarPage() {
     if (oldIndex !== -1 && newIndex !== -1) {
       arrayMove(filteredSlots, oldIndex, newIndex);
       toast({ title: "Slots reordered", description: `Moved slot to position ${newIndex + 1}` });
+      // TODO: Implement slot reordering via API if needed
     }
   };
 
-  // Add single time slot
+  // Handle add slot
   const handleAddSlot = () => {
     if (!date) {
       toast({ title: "Error", description: "Please select a date", variant: "destructive" });
       return;
     }
-
-    const newSlot: TimeSlot = {
-      id: `slot-${Date.now()}`,
-      date,
-      startTime: newSlotStart,
-      endTime: newSlotEnd,
-      serviceId: selectedServiceId,
-      isAvailable: true,
-      isRecurring: false,
-    };
-
-    const dateKey = format(date, "yyyy-MM-dd");
-    if (!mockSlotsByDate[dateKey]) {
-      mockSlotsByDate[dateKey] = [];
-    }
-    mockSlotsByDate[dateKey].push(newSlot);
-
-    toast({
-      title: "Slot Added",
-      description: `Added slot from ${newSlotStart} to ${newSlotEnd}`,
-    });
-
-    setIsAddingSlot(false);
-    setNewSlotStart("09:00");
-    setNewSlotEnd("10:00");
+    addSlotMutation.mutate();
   };
 
-  // Handle recurring slots generation
+  // Handle delete slot
+  const handleDeleteSlot = (slotId: string) => {
+    deleteSlotMutation.mutate(slotId);
+  };
+
+  // Handle toggle availability
+  const handleToggleAvailability = (slotId: string) => {
+    toggleAvailabilityMutation.mutate(slotId);
+  };
+
+  // Handle generate recurring slots
   const handleGenerateRecurringSlots = ({
     startTime,
     endTime,
@@ -132,62 +249,13 @@ export default function AvailabilityCalendarPage() {
     startDate: Date;
     endDate?: Date;
   }) => {
-    const generateUntilDate = endDate || new Date(startDate.getTime() + 365 * 24 * 60 * 60 * 1000); // 1 year if no end date
-    const generatedSlots: TimeSlot[] = [];
-    let currentDate = new Date(startDate);
-
-    while (currentDate <= generateUntilDate) {
-      if (daysOfWeek.includes(currentDate.getDay())) {
-        const dateKey = format(currentDate, "yyyy-MM-dd");
-        
-        const newSlot: TimeSlot = {
-          id: `slot-${Date.now()}-${currentDate.getTime()}`,
-          date: new Date(currentDate),
-          startTime,
-          endTime,
-          serviceId: selectedServiceId,
-          isAvailable: true,
-          isRecurring: true,
-        };
-
-        if (!mockSlotsByDate[dateKey]) {
-          mockSlotsByDate[dateKey] = [];
-        }
-        mockSlotsByDate[dateKey].push(newSlot);
-        generatedSlots.push(newSlot);
-      }
-
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-
-    toast({
-      title: "Recurring Slots Generated",
-      description: `Created ${generatedSlots.length} recurring time slots`,
+    createRecurringMutation.mutate({
+      startTime,
+      endTime,
+      daysOfWeek,
+      startDate,
+      endDate,
     });
-  };
-
-  // Handle slot deletion
-  const handleDeleteSlot = (slotId: string) => {
-    const dateKey = format(date || new Date(), "yyyy-MM-dd");
-    if (mockSlotsByDate[dateKey]) {
-      mockSlotsByDate[dateKey] = mockSlotsByDate[dateKey].filter((s) => s.id !== slotId);
-      toast({ title: "Slot Deleted", variant: "destructive" });
-    }
-  };
-
-  // Handle toggle availability
-  const handleToggleAvailability = (slotId: string) => {
-    const dateKey = format(date || new Date(), "yyyy-MM-dd");
-    if (mockSlotsByDate[dateKey]) {
-      const slot = mockSlotsByDate[dateKey].find((s) => s.id === slotId);
-      if (slot) {
-        slot.isAvailable = !slot.isAvailable;
-        toast({
-          title: slot.isAvailable ? "Slot Unblocked" : "Slot Blocked",
-          description: `${slot.startTime} - ${slot.endTime}`,
-        });
-      }
-    }
   };
 
   return (
@@ -303,8 +371,8 @@ export default function AvailabilityCalendarPage() {
                       <DraggableTimeSlot
                         key={slot.id}
                         slot={slot}
-                        price={selectedService?.price || 0}
-                        duration={selectedService?.duration || 0}
+                        price={selectedService?.basePrice || 0}
+                        duration={selectedService?.durationMinutes || 0}
                         onDelete={() => handleDeleteSlot(slot.id)}
                         onToggleAvailability={() => handleToggleAvailability(slot.id)}
                       />

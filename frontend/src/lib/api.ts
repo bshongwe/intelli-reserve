@@ -269,8 +269,46 @@ export const analyticsAPI = {
   },
 };
 
+// User API
+export interface UserProfile {
+  id: string;
+  hostId: string;
+  fullName: string;
+  businessName: string;
+  email: string;
+  phone: string;
+  bio: string;
+  location: string;
+  avatarUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const userAPI = {
+  /**
+   * Get user profile
+   */
+  getUserProfile: async (hostId: string): Promise<UserProfile> => {
+    return apiCall(`/users/profile?hostId=${hostId}`);
+  },
+
+  /**
+   * Update user profile
+   */
+  updateUserProfile: async (
+    hostId: string,
+    data: Partial<Omit<UserProfile, 'id' | 'hostId' | 'createdAt' | 'updatedAt'>>
+  ): Promise<UserProfile> => {
+    return apiCall(`/users/profile?hostId=${hostId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+};
+
 export default {
   servicesAPI,
   timeSlotsAPI,
   analyticsAPI,
+  userAPI,
 };

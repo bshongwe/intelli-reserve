@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -17,6 +18,7 @@ import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Save, Upload, User, Bell, CreditCard, Shield, Trash2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { userAPI } from "@/lib/api";
 
 const profileSchema = z.object({
   fullName: z.string().min(2, "Name must be at least 2 characters"),
@@ -30,32 +32,66 @@ const profileSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
 export default function HostSettingsPage() {
+  // TODO: Replace with actual auth integration to get real hostId
+  const hostId = "host-001";
+
   const [activeTab, setActiveTab] = useState("profile");
-  const [isSaving, setIsSaving] = useState(false);
+  const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      fullName: "Alex Rivera",
-      businessName: "Rivera Photography Studio",
-      email: "alex@riverastudio.com",
-      phone: "+1 (555) 123-4567",
-      bio: "Professional photographer specializing in corporate events and portraits. 8+ years experience.",
-      location: "San Francisco, CA",
+      fullName: "",
+      businessName: "",
+      email: "",
+      phone: "",
+      bio: "",
+      location: "",
     },
   });
 
-  const onSubmit = async (_data: ProfileFormValues) => {
-    setIsSaving(true);
-    // Simulate API call to BFF
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    toast({
-      title: "Profile Updated",
-      description: "Your changes have been saved successfully.",
-    });
-    setIsSaving(false);
+  // Fetch user profile
+  const { data: userProfile } = useQuery({
+    queryKey: ["user-profile", hostId],
+    queryFn: () => userAPI.getUserProfile(hostId),
+  });
+
+  // Update form when profile data is loaded
+  useEffect(() => {
+    if (userProfile) {
+      form.reset({
+        fullName: userProfile.fullName,
+        businessName: userProfile.businessName,
+        email: userProfile.email,
+        phone: userProfile.phone,
+        bio: userProfile.bio,
+        location: userProfile.location,
+      });
+    }
+  }, [userProfile, form]);
+
+  // Mutation: Update profile
+  const updateProfileMutation = useMutation({
+    mutationFn: (data: ProfileFormValues) => userAPI.updateUserProfile(hostId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["user-profile", hostId] });
+      toast({
+        title: "Profile Updated",
+        description: "Your changes have been saved successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onSubmit = async (data: ProfileFormValues) => {
+    updateProfileMutation.mutate(data);
   };
 
   return (
@@ -163,9 +199,9 @@ export default function HostSettingsPage() {
                   </p>
                 </div>
 
-                <Button type="submit" disabled={isSaving} size="sm" className="gap-2 text-xs sm:text-sm w-full sm:w-auto">
+                <Button type="submit" disabled={updateProfileMutation.isPending} size="sm" className="gap-2 text-xs sm:text-sm w-full sm:w-auto">
                   <Save className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  {isSaving ? "Saving..." : "Save Profile"}
+                  {updateProfileMutation.isPending ? "Saving..." : "Save Profile"}
                 </Button>
               </form>
             </CardContent>

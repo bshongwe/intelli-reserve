@@ -97,8 +97,16 @@ function promisifyGRPCMethod(client: any, method: string): (request: any) => Pro
 
 export const bookingService = {
   createBooking: async (request: any) => {
+    console.log('[gRPC Client] CreateBooking called with:', JSON.stringify(request, null, 2));
     const method = promisifyGRPCMethod(bookingClient, 'CreateBooking');
-    return method(request);
+    try {
+      const result = await method(request);
+      console.log('[gRPC Client] CreateBooking response:', JSON.stringify(result, null, 2));
+      return result;
+    } catch (error: any) {
+      console.error('[gRPC Client] CreateBooking error:', error);
+      throw error;
+    }
   },
 
   getBooking: async (request: any) => {

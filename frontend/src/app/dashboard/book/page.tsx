@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import axios from "axios";
 import { Calendar as CalendarIcon, CreditCard, CheckCircle2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +9,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
+import { bookingsAPI } from "@/lib/api";
 import { format } from "date-fns";
 
 export default function BookPage() {
@@ -19,21 +19,21 @@ export default function BookPage() {
 
   const bookingMutation = useMutation({
     mutationFn: async (data: any) => {
-      const res = await axios.post("/api/bookings", data);
-      return res.data;
+      return await bookingsAPI.createBooking(data);
     },
     onSuccess: (data) => {
       toast({ 
         title: "Booking Initiated!", 
-        description: `Booking ID: ${data.bookingId}` 
+        description: `Booking ID: ${data.id}` 
       });
       setInventoryId("");
       setSelectedDate(new Date());
     },
-    onError: () => {
+    onError: (error: any) => {
+      const errorMessage = error?.message || "Failed to start booking";
       toast({ 
         title: "Error", 
-        description: "Failed to start booking", 
+        description: errorMessage, 
         variant: "destructive" 
       });
     },
@@ -83,7 +83,7 @@ export default function BookPage() {
             <div className="mt-4 sm:mt-6 space-y-2">
               <Label className="text-xs sm:text-sm font-semibold">Inventory ID</Label>
               <Input
-                placeholder="e.g., service-456"
+                placeholder="e.g., 550e8400-e29b-41d4-a716-446655440001"
                 value={inventoryId}
                 onChange={(e) => setInventoryId(e.target.value)}
                 className="border-2 hover:border-primary/50 focus:border-primary transition-colors text-sm"

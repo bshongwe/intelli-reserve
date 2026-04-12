@@ -27,6 +27,11 @@ const (
 	errBookingNotFound   = "booking not found"
 )
 
+// Helper function to format timestamps
+func formatTimestamp(t time.Time) string {
+	return t.Format(time.RFC3339)
+}
+
 // NewBookingServiceServer creates a new BookingServiceServer
 func NewBookingServiceServer(db *pgx.Conn) *BookingServiceServer {
 	return &BookingServiceServer{db: db}
@@ -36,11 +41,19 @@ func NewBookingServiceServer(db *pgx.Conn) *BookingServiceServer {
 func (s *BookingServiceServer) CreateBooking(ctx context.Context, req *pb.CreateBookingRequest) (*pb.CreateBookingResponse, error) {
 	// Validate required fields
 	if req.ServiceId == "" || req.TimeSlotId == "" || req.HostId == "" || req.ClientName == "" || req.ClientEmail == "" {
+		log.Printf("❌ Validation error: Missing required fields")
 		return &pb.CreateBookingResponse{
 			Success:      false,
 			ErrorMessage: "Missing required fields: service_id, time_slot_id, host_id, client_name, client_email",
 		}, status.Error(codes.InvalidArgument, "missing required fields")
 	}
+
+	log.Printf("📝 CreateBooking request received:")
+	log.Printf("   Service ID: %s", req.ServiceId)
+	log.Printf("   Time Slot ID: %s", req.TimeSlotId)
+	log.Printf("   Host ID: %s", req.HostId)
+	log.Printf("   Client Name: %s", req.ClientName)
+	log.Printf("   Client Email: %s", req.ClientEmail)
 
 	bookingID := uuid.New().String()
 	now := time.Now().UTC()
@@ -53,6 +66,9 @@ func (s *BookingServiceServer) CreateBooking(ctx context.Context, req *pb.Create
 	`
 
 	var booking common.Booking
+	var createdAtTime time.Time
+	var updatedAtTime time.Time
+	
 	err := s.db.QueryRow(ctx, query,
 		bookingID, req.ServiceId, req.TimeSlotId, req.HostId, req.ClientName,
 		req.ClientEmail, req.ClientPhone, req.NumberOfParticipants, "pending", req.Notes, now, now,
@@ -60,18 +76,24 @@ func (s *BookingServiceServer) CreateBooking(ctx context.Context, req *pb.Create
 		&booking.Id, &booking.ServiceId, &booking.TimeSlotId, &booking.HostId,
 		&booking.ClientName, &booking.ClientEmail, &booking.ClientPhone,
 		&booking.NumberOfParticipants, &booking.Status, &booking.Notes,
-		&booking.CreatedAt, &booking.UpdatedAt,
+		&createdAtTime, &updatedAtTime,
 	)
 
 	if err != nil {
-		log.Printf("Error creating booking: %v", err)
+		log.Printf("❌ Database error creating booking: %v", err)
+		log.Printf("   Error Type: %T", err)
+		log.Printf("   Error String: %s", err.Error())
 		return &pb.CreateBookingResponse{
 			Success:      false,
 			ErrorMessage: fmt.Sprintf("Failed to create booking: %v", err),
 		}, status.Error(codes.Internal, "failed to create booking")
 	}
 
-	log.Printf("✅ Booking created via gRPC: %s", bookingID)
+	// Convert timestamps to ISO8601 format strings for gRPC proto
+	booking.CreatedAt = createdAtTime.Format(time.RFC3339)
+	booking.UpdatedAt = updatedAtTime.Format(time.RFC3339)
+
+	log.Printf("✅ Booking created successfully: %s", bookingID)
 
 	return &pb.CreateBookingResponse{
 		Success: true,
@@ -89,6 +111,7 @@ func (s *BookingServiceServer) GetBooking(ctx context.Context, req *pb.GetBookin
 	}
 
 	var booking common.Booking
+	var createdAtTime, updatedAtTime time.Time
 	query := `
 		SELECT id, service_id, time_slot_id, host_id, client_name, client_email, client_phone, number_of_participants, status, notes, created_at, updated_at
 		FROM bookings
@@ -99,7 +122,7 @@ func (s *BookingServiceServer) GetBooking(ctx context.Context, req *pb.GetBookin
 		&booking.Id, &booking.ServiceId, &booking.TimeSlotId, &booking.HostId,
 		&booking.ClientName, &booking.ClientEmail, &booking.ClientPhone,
 		&booking.NumberOfParticipants, &booking.Status, &booking.Notes,
-		&booking.CreatedAt, &booking.UpdatedAt,
+		&createdAtTime, &updatedAtTime,
 	)
 
 	if err == sql.ErrNoRows {
@@ -116,6 +139,9 @@ func (s *BookingServiceServer) GetBooking(ctx context.Context, req *pb.GetBookin
 			ErrorMessage: fmt.Sprintf("Failed to retrieve booking: %v", err),
 		}, status.Error(codes.Internal, "failed to retrieve booking")
 	}
+
+	booking.CreatedAt = formatTimestamp(createdAtTime)
+	booking.UpdatedAt = formatTimestamp(updatedAtTime)
 
 	return &pb.GetBookingResponse{
 		Success: true,
@@ -177,16 +203,19 @@ func (s *BookingServiceServer) GetHostBookings(ctx context.Context, req *pb.GetH
 	var bookings []*common.Booking
 	for rows.Next() {
 		var booking common.Booking
+		var createdAtTime, updatedAtTime time.Time
 		err := rows.Scan(
 			&booking.Id, &booking.ServiceId, &booking.TimeSlotId, &booking.HostId,
 			&booking.ClientName, &booking.ClientEmail, &booking.ClientPhone,
 			&booking.NumberOfParticipants, &booking.Status, &booking.Notes,
-			&booking.CreatedAt, &booking.UpdatedAt,
+			&createdAtTime, &updatedAtTime,
 		)
 		if err != nil {
 			log.Printf("Error scanning booking: %v", err)
 			continue
 		}
+		booking.CreatedAt = formatTimestamp(createdAtTime)
+		booking.UpdatedAt = formatTimestamp(updatedAtTime)
 		bookings = append(bookings, &booking)
 	}
 
@@ -261,16 +290,19 @@ func (s *BookingServiceServer) GetClientBookings(ctx context.Context, req *pb.Ge
 	var bookings []*common.Booking
 	for rows.Next() {
 		var booking common.Booking
+		var createdAtTime, updatedAtTime time.Time
 		err := rows.Scan(
 			&booking.Id, &booking.ServiceId, &booking.TimeSlotId, &booking.HostId,
 			&booking.ClientName, &booking.ClientEmail, &booking.ClientPhone,
 			&booking.NumberOfParticipants, &booking.Status, &booking.Notes,
-			&booking.CreatedAt, &booking.UpdatedAt,
+			&createdAtTime, &updatedAtTime,
 		)
 		if err != nil {
 			log.Printf("Error scanning booking: %v", err)
 			continue
 		}
+		booking.CreatedAt = formatTimestamp(createdAtTime)
+		booking.UpdatedAt = formatTimestamp(updatedAtTime)
 		bookings = append(bookings, &booking)
 	}
 
@@ -318,11 +350,12 @@ func (s *BookingServiceServer) UpdateBookingStatus(ctx context.Context, req *pb.
 	`
 
 	var booking common.Booking
+	var createdAtTime, updatedAtTime time.Time
 	err := s.db.QueryRow(ctx, query, req.NewStatus, now, req.BookingId).Scan(
 		&booking.Id, &booking.ServiceId, &booking.TimeSlotId, &booking.HostId,
 		&booking.ClientName, &booking.ClientEmail, &booking.ClientPhone,
 		&booking.NumberOfParticipants, &booking.Status, &booking.Notes,
-		&booking.CreatedAt, &booking.UpdatedAt,
+		&createdAtTime, &updatedAtTime,
 	)
 
 	if err == sql.ErrNoRows {
@@ -339,6 +372,9 @@ func (s *BookingServiceServer) UpdateBookingStatus(ctx context.Context, req *pb.
 			ErrorMessage: fmt.Sprintf("Failed to update booking: %v", err),
 		}, status.Error(codes.Internal, "failed to update booking")
 	}
+
+	booking.CreatedAt = formatTimestamp(createdAtTime)
+	booking.UpdatedAt = formatTimestamp(updatedAtTime)
 
 	log.Printf("✅ Booking status updated via gRPC: %s -> %s", req.BookingId, req.NewStatus)
 
@@ -368,11 +404,12 @@ func (s *BookingServiceServer) CancelBooking(ctx context.Context, req *pb.Cancel
 	`
 
 	var booking common.Booking
+	var createdAtTime, updatedAtTime time.Time
 	err := s.db.QueryRow(ctx, query, notes, now, req.BookingId).Scan(
 		&booking.Id, &booking.ServiceId, &booking.TimeSlotId, &booking.HostId,
 		&booking.ClientName, &booking.ClientEmail, &booking.ClientPhone,
 		&booking.NumberOfParticipants, &booking.Status, &booking.Notes,
-		&booking.CreatedAt, &booking.UpdatedAt,
+		&createdAtTime, &updatedAtTime,
 	)
 
 	if err == sql.ErrNoRows {
@@ -389,6 +426,9 @@ func (s *BookingServiceServer) CancelBooking(ctx context.Context, req *pb.Cancel
 			ErrorMessage: fmt.Sprintf("Failed to cancel booking: %v", err),
 		}, status.Error(codes.Internal, "failed to cancel booking")
 	}
+
+	booking.CreatedAt = formatTimestamp(createdAtTime)
+	booking.UpdatedAt = formatTimestamp(updatedAtTime)
 
 	log.Printf("✅ Booking cancelled via gRPC: %s", req.BookingId)
 

@@ -25,7 +25,7 @@ export const BookingServiceAdapter = {
     numberOfParticipants?: number,
     notes?: string
   ) {
-    return await bookingService.createBooking({
+    const payload = {
       service_id: serviceId,
       time_slot_id: timeSlotId,
       host_id: hostId,
@@ -34,7 +34,24 @@ export const BookingServiceAdapter = {
       client_phone: clientPhone || '',
       number_of_participants: numberOfParticipants || 1,
       notes: notes || '',
-    });
+    };
+    
+    console.log('[gRPC Adapter] Creating booking with payload:', JSON.stringify(payload, null, 2));
+    
+    try {
+      const response = await bookingService.createBooking(payload);
+      console.log('[gRPC Adapter] Booking creation response:', JSON.stringify(response, null, 2));
+      return response;
+    } catch (error: any) {
+      console.error('[gRPC Adapter] Booking creation error:', error);
+      console.error('[gRPC Error Details]', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        stack: error.stack,
+      });
+      throw error;
+    }
   },
 
   async getBooking(bookingId: string) {

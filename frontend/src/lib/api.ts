@@ -33,6 +33,21 @@ export interface TimeSlot {
   updatedAt: string;
 }
 
+export interface Booking {
+  id: string;
+  serviceId: string;
+  timeSlotId: string;
+  hostId: string;
+  clientName: string;
+  clientEmail: string;
+  clientPhone?: string;
+  numberOfParticipants: number;
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface AnalyticsData {
   revenueData: Array<{
     month: string;
@@ -143,6 +158,13 @@ async function apiCall<T>(
 // Services API
 export const servicesAPI = {
   /**
+   * Get all available services (public listing)
+   */
+  getAllServices: async (): Promise<Service[]> => {
+    return apiCall(`/services`);
+  },
+
+  /**
    * Get all services for a host
    */
   getHostServices: async (hostId: string): Promise<Service[]> => {
@@ -207,6 +229,13 @@ export const servicesAPI = {
 
 // Time Slots API
 export const timeSlotsAPI = {
+  /**
+   * Get all available time slots for a service
+   */
+  getAvailableSlots: async (serviceId: string): Promise<TimeSlot[]> => {
+    return apiCall(`/services/time-slots/available?serviceId=${serviceId}`);
+  },
+
   /**
    * Get time slots for a service on a specific date
    */
@@ -356,9 +385,92 @@ export const userAPI = {
   },
 };
 
+// Booking API
+export interface CreateBookingInput {
+  serviceId: string;
+  timeSlotId: string;
+  hostId: string;
+  clientName: string;
+  clientEmail: string;
+  clientPhone?: string;
+  numberOfParticipants?: number;
+  notes?: string;
+}
+
+export const bookingsAPI = {
+  /**
+   * Create a new booking
+   */
+  createBooking: async (data: CreateBookingInput): Promise<Booking> => {
+    return apiCall('/bookings', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  /**
+   * Get a booking by ID
+   */
+  getBooking: async (bookingId: string): Promise<Booking> => {
+    return apiCall(`/bookings/${bookingId}`);
+  },
+
+  /**
+   * Get bookings for a host
+   */
+  getHostBookings: async (hostId: string, status?: string): Promise<Booking[]> => {
+    let endpoint = `/bookings?hostId=${hostId}`;
+    if (status) {
+      endpoint += `&status=${status}`;
+    }
+    return apiCall(endpoint);
+  },
+
+  /**
+   * Get bookings for a client email
+   */
+  getClientBookings: async (clientEmail: string, status?: string): Promise<Booking[]> => {
+    let endpoint = `/bookings?clientEmail=${clientEmail}`;
+    if (status) {
+      endpoint += `&status=${status}`;
+    }
+    return apiCall(endpoint);
+  },
+
+  /**
+   * Update booking status
+   */
+  updateBookingStatus: async (bookingId: string, newStatus: string): Promise<Booking> => {
+    return apiCall(`/bookings/${bookingId}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status: newStatus }),
+    });
+  },
+
+  /**
+   * Cancel a booking
+   */
+  cancelBooking: async (bookingId: string, reason?: string): Promise<Booking> => {
+    return apiCall(`/bookings/${bookingId}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  },
+
+  /**
+   * Delete a booking
+   */
+  deleteBooking: async (bookingId: string): Promise<void> => {
+    return apiCall(`/bookings/${bookingId}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
 export default {
   servicesAPI,
   timeSlotsAPI,
   analyticsAPI,
   userAPI,
+  bookingsAPI,
 };

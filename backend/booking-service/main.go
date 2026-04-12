@@ -1,57 +1,104 @@
 package main
 
 import (
-	"context"
-	"fmt"
+	"encoding/json"
 	"log"
-	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/google/uuid"
-	"google.golang.org/grpc"
-	pb "github.com/intelli-reserve/backend/internal/proto" // adjust path after creating proto
 )
 
-type server struct {
-	pb.UnimplementedBookingServiceServer
+type CreateBookingRequest struct {
+	InventoryID string `json:"inventory_id"`
+	SlotStart   string `json:"slot_start"`
+	UserID      string `json:"user_id"`
+	TenantID    string `json:"tenant_id"`
 }
 
-func (s *server) CreateBooking(ctx context.Context, req *pb.CreateBookingRequest) (*pb.CreateBookingResponse, error) {
+type CreateBookingResponse struct {
+	BookingID string `json:"booking_id"`
+	Status    string `json:"status"`
+	Message   string `json:"message"`
+}
+
+type server struct {
+	// Backend server placeholder
+}
+
+func (s *server) CreateBooking(req *CreateBookingRequest) (*CreateBookingResponse, error) {
 	log.Printf("Received booking request: %v", req)
 
-	// TODO: Start Saga here
-	bookingID := "bk_" + uuid.New().String()[:8]
+	bookingID := "booking_" + uuid.New().String()[:12]
 
-	return &pb.CreateBookingResponse{
-		BookingId: bookingID,
+	return &CreateBookingResponse{
+		BookingID: bookingID,
 		Status:    "INITIATED",
-		Message:   "Saga started successfully",
+		Message:   "Booking created successfully",
 	}, nil
 }
 
-func main() {
-	lis, err := net.Listen("tcp", ":8080")
-	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+func createBookingHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
 	}
 
-	s := grpc.NewServer()
-	pb.RegisterBookingServiceServer(s, &server{})
+	var req CreateBookingRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
 
-	log.Println("🚀 Booking Service running on :8080")
+	// Validate required fields
+	if req.InventoryID == "" || req.UserID == "" || req.TenantID == "" {
+		http.Error(w, "Missing required fields", http.StatusBadRequest)
+		return
+	}
 
-	// Graceful shutdown
+	bookingID := "booking_" + uuid.New().String()[:12]
+
+	response := CreateBookingResponse{
+		BookingID: bookingID,
+		Status:    "INITIATED",
+		Message:   "Booking created successfully",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(response)
+
+	log.Printf("✅ Booking created: %s", bookingID)
+}
+
+func healthHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":  "healthy",
+		"service": "booking-service",
+	})
+}
+
+func main() {
+	// Start REST API server
 	go func() {
-		sig := make(chan os.Signal, 1)
-		signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
-		<-sig
-		log.Println("Shutting down gRPC server...")
-		s.GracefulStop()
+		http.HandleFunc("/health", healthHandler)
+		http.HandleFunc("/v1/bookings", createBookingHandler)
+
+		port := ":8080"
+		log.Printf("🚀 Booking Service running on %s", port)
+
+		if err := http.ListenAndServe(port, nil); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Server error: %v", err)
+		}
 	}()
 
-	if err := s.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
-	}
+	// Graceful shutdown
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	<-sigChan
+
+	log.Println("Shutting down booking service...")
 }

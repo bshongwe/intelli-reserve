@@ -81,7 +81,7 @@ export function createServiceRoutes(pool: Pool): Router {
   const router = Router();
 
   // Create service
-  router.post('/services', async (req: Request, res: Response) => {
+  router.post('/', async (req: Request, res: Response) => {
     try {
       const hostId = req.query.hostId as string;
       if (!hostId) {
@@ -125,7 +125,7 @@ export function createServiceRoutes(pool: Pool): Router {
   });
 
   // Get services for host
-  router.get('/services', async (req: Request, res: Response) => {
+  router.get('/', async (req: Request, res: Response) => {
     try {
       const hostId = req.query.hostId as string;
       if (!hostId) {

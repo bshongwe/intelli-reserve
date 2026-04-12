@@ -25,6 +25,14 @@ const DAYS_OF_WEEK = [
   { value: 6, label: "Saturday" },
 ];
 
+// Helper function to convert Date to yyyy-MM-dd format for date input
+const formatDateForInput = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 export function RecurringSlotGenerator({
   onGenerateSlots,
   isLoading = false,
@@ -38,6 +46,7 @@ export function RecurringSlotGenerator({
     handleSubmit,
     formState: { errors },
     reset,
+    watch,
   } = useForm<RecurringSlotData>({
     resolver: zodResolver(recurringSlotSchema),
     defaultValues: {
@@ -47,6 +56,12 @@ export function RecurringSlotGenerator({
       startDate: new Date(),
     },
   });
+
+  // Watch the startDate to convert it to proper format for input
+  const startDateValue = watch("startDate");
+  const startDateString = startDateValue instanceof Date 
+    ? formatDateForInput(startDateValue)
+    : startDateValue;
 
   const onSubmit = (data: RecurringSlotData) => {
     if (selectedDays.length === 0) {
@@ -162,6 +177,7 @@ export function RecurringSlotGenerator({
                 <Input
                   id="startDate"
                   type="date"
+                  value={startDateString}
                   {...register("startDate", {
                     valueAsDate: true,
                   })}

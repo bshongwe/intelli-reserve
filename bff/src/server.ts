@@ -3,15 +3,16 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { Pool } from 'pg';
 import bookingRoutes from './routes/booking.routes';
-import dashboardRoutes from './routes/dashboard.routes';
+import createDashboardRoutes from './routes/dashboard.routes';
 import createServiceRoutes from './routes/services.routes';
 import createAnalyticsRoutes from './routes/analytics.routes';
 import createUserRoutes from './routes/users.routes';
+import { initializeGRPCClients, closeGRPCClients } from './grpc/client';
 
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 3001;
 
 // Database connection pool
 const pool = new Pool({
@@ -31,12 +32,16 @@ app.use(express.json());
 
 // Health check
 app.get('/health', (req, res) => {
-  res.json({ status: 'healthy', service: 'intelli-reserve-bff' });
+  res.json({
+    status: 'healthy',
+    service: 'intelli-reserve-bff',
+    grpc: 'connecting to :8090',
+  });
 });
 
 // Routes
 app.use('/api/bookings', bookingRoutes);
-app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/dashboard', createDashboardRoutes(pool));
 app.use('/api/services', createServiceRoutes(pool));
 app.use('/api/analytics', createAnalyticsRoutes(pool));
 app.use('/api/users', createUserRoutes(pool));
@@ -46,10 +51,39 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   console.error(err);
   res.status(500).json({
     error: 'Internal Server Error',
-    message: process.env.NODE_ENV === 'production' ? undefined : err.message
+    message: process.env.NODE_ENV === 'production' ? undefined : err.message,
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 BFF running on http://localhost:${PORT}`);
-});
+// Initialize gRPC clients and start server
+async function startServer() {
+  try {
+    // Initialize gRPC clients
+    await initializeGRPCClients();
+    console.log('✅ gRPC clients initialized');
+
+    // Start Express server
+    app.listen(PORT, () => {
+      console.log(`🚀 BFF running on http://localhost:${PORT}`);
+      console.log(`📡 Connected to gRPC backend on :8090`);
+    });
+
+    // Graceful shutdown
+    process.on('SIGINT', () => {
+      console.log('\n🛑 Shutting down BFF...');
+      closeGRPCClients();
+      process.exit(0);
+    });
+
+    process.on('SIGTERM', () => {
+      console.log('\n🛑 Shutting down BFF...');
+      closeGRPCClients();
+      process.exit(0);
+    });
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+startServer();

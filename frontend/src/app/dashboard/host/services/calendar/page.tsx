@@ -194,6 +194,27 @@ export default function AvailabilityCalendarPage() {
     },
   });
 
+  // Mutation: Reorder time slots
+  const reorderSlotsMutation = useMutation({
+    mutationFn: (slots: typeof filteredSlots) => {
+      if (!selectedServiceId) throw new Error("Service must be selected");
+      // Send the new order to the API
+      return timeSlotsAPI.reorderTimeSlots(selectedServiceId, slots.map(s => s.id));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["time-slots", selectedServiceId, dateKey],
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to reorder slots",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Drag and drop sensors
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -210,9 +231,9 @@ export default function AvailabilityCalendarPage() {
     const newIndex = filteredSlots.findIndex((s) => s.id === over.id);
 
     if (oldIndex !== -1 && newIndex !== -1) {
-      arrayMove(filteredSlots, oldIndex, newIndex);
+      const reorderedSlots = arrayMove([...filteredSlots], oldIndex, newIndex);
+      reorderSlotsMutation.mutate(reorderedSlots);
       toast({ title: "Slots reordered", description: `Moved slot to position ${newIndex + 1}` });
-      // TODO: Implement slot reordering via API if needed
     }
   };
 

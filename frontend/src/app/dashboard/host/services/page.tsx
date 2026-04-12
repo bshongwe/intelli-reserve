@@ -389,13 +389,20 @@ export default function HostServicesPage() {
                   >
                     Cancel
                   </Button>
+                  {(() => {
+                    if (createOrUpdateMutation.isPending) return "Saving...";
+                    return editingService ? "Update Service" : "Create Service";
+                  })()}
                   <Button
                     type="submit"
                     disabled={isSubmitting || createOrUpdateMutation.isPending}
                     size="sm"
                     className="text-xs sm:text-sm"
                   >
-                    {createOrUpdateMutation.isPending ? "Saving..." : editingService ? "Update Service" : "Create Service"}
+                    {(() => {
+                      if (createOrUpdateMutation.isPending) return "Saving...";
+                      return editingService ? "Update Service" : "Create Service";
+                    })()}
                   </Button>
                 </DialogFooter>
               </form>

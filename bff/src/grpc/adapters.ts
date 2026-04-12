@@ -1,0 +1,231 @@
+/**
+ * gRPC Service Adapters
+ * Translates Express REST endpoints to gRPC service calls
+ * Acts as a bridge between REST and gRPC protocols
+ */
+
+import {
+  bookingService,
+  analyticsService,
+  servicesManagement,
+} from './client';
+
+/**
+ * BOOKING SERVICE ADAPTERS
+ */
+
+export const BookingServiceAdapter = {
+  async createBooking(
+    serviceId: string,
+    timeSlotId: string,
+    hostId: string,
+    clientName: string,
+    clientEmail: string,
+    clientPhone?: string,
+    numberOfParticipants?: number,
+    notes?: string
+  ) {
+    return await bookingService.createBooking({
+      service_id: serviceId,
+      time_slot_id: timeSlotId,
+      host_id: hostId,
+      client_name: clientName,
+      client_email: clientEmail,
+      client_phone: clientPhone || '',
+      number_of_participants: numberOfParticipants || 1,
+      notes: notes || '',
+    });
+  },
+
+  async getBooking(bookingId: string) {
+    return await bookingService.getBooking({
+      booking_id: bookingId,
+    });
+  },
+
+  async getHostBookings(
+    hostId: string,
+    statusFilter?: string,
+    limit: number = 50,
+    offset: number = 0
+  ) {
+    return await bookingService.getHostBookings({
+      host_id: hostId,
+      status_filter: statusFilter || '',
+      limit,
+      offset,
+    });
+  },
+
+  async getClientBookings(
+    clientEmail: string,
+    statusFilter?: string,
+    limit: number = 50,
+    offset: number = 0
+  ) {
+    return await bookingService.getClientBookings({
+      client_email: clientEmail,
+      status_filter: statusFilter || '',
+      limit,
+      offset,
+    });
+  },
+
+  async updateBookingStatus(bookingId: string, newStatus: string) {
+    return await bookingService.updateBookingStatus({
+      booking_id: bookingId,
+      new_status: newStatus,
+    });
+  },
+
+  async cancelBooking(bookingId: string, reason?: string) {
+    return await bookingService.cancelBooking({
+      booking_id: bookingId,
+      reason: reason || '',
+    });
+  },
+
+  async deleteBooking(bookingId: string) {
+    return await bookingService.deleteBooking({
+      booking_id: bookingId,
+    });
+  },
+};
+
+/**
+ * ANALYTICS SERVICE ADAPTERS
+ */
+
+export const AnalyticsServiceAdapter = {
+  async getDashboardMetrics(hostId: string) {
+    return await analyticsService.getDashboardMetrics({
+      host_id: hostId,
+    });
+  },
+
+  async getAnalytics(hostId: string, timeRange: string = '6m') {
+    return await analyticsService.getAnalytics({
+      host_id: hostId,
+      time_range: timeRange,
+    });
+  },
+
+  async getRevenueReport(hostId: string, startDate: string, endDate: string) {
+    return await analyticsService.getRevenueReport({
+      host_id: hostId,
+      start_date: startDate,
+      end_date: endDate,
+    });
+  },
+
+  async getBookingStatistics(hostId: string, timeRange: string = '6m') {
+    return await analyticsService.getBookingStatistics({
+      host_id: hostId,
+      time_range: timeRange,
+    });
+  },
+};
+
+/**
+ * SERVICES MANAGEMENT ADAPTERS
+ */
+
+export const ServicesManagementAdapter = {
+  async createService(
+    hostId: string,
+    name: string,
+    description: string,
+    category: string,
+    durationMinutes: number,
+    basePrice: number,
+    maxParticipants: number,
+    isActive: boolean = true
+  ) {
+    return await servicesManagement.createService({
+      host_id: hostId,
+      name,
+      description,
+      category,
+      duration_minutes: durationMinutes,
+      base_price: basePrice,
+      max_participants: maxParticipants,
+      is_active: isActive,
+    });
+  },
+
+  async getService(serviceId: string) {
+    return await servicesManagement.getService({
+      service_id: serviceId,
+    });
+  },
+
+  async getHostServices(
+    hostId: string,
+    onlyActive: boolean = true,
+    limit: number = 50,
+    offset: number = 0
+  ) {
+    return await servicesManagement.getHostServices({
+      host_id: hostId,
+      only_active: onlyActive,
+      limit,
+      offset,
+    });
+  },
+
+  async updateService(serviceId: string, updates: any) {
+    return await servicesManagement.updateService({
+      service_id: serviceId,
+      ...updates,
+    });
+  },
+
+  async deleteService(serviceId: string) {
+    return await servicesManagement.deleteService({
+      service_id: serviceId,
+    });
+  },
+
+  async createTimeSlot(
+    serviceId: string,
+    date: string,
+    startTime: string,
+    endTime: string,
+    isAvailable: boolean = true
+  ) {
+    return await servicesManagement.createTimeSlot({
+      service_id: serviceId,
+      date,
+      start_time: startTime,
+      end_time: endTime,
+      is_available: isAvailable,
+    });
+  },
+
+  async getTimeSlot(timeSlotId: string) {
+    return await servicesManagement.getTimeSlot({
+      time_slot_id: timeSlotId,
+    });
+  },
+
+  async getAvailableTimeSlots(serviceId: string, dateFrom: string, dateTo: string) {
+    return await servicesManagement.getAvailableTimeSlots({
+      service_id: serviceId,
+      date_from: dateFrom,
+      date_to: dateTo,
+    });
+  },
+
+  async updateTimeSlotAvailability(timeSlotId: string, isAvailable: boolean) {
+    return await servicesManagement.updateTimeSlotAvailability({
+      time_slot_id: timeSlotId,
+      is_available: isAvailable,
+    });
+  },
+
+  async deleteTimeSlot(timeSlotId: string) {
+    return await servicesManagement.deleteTimeSlot({
+      time_slot_id: timeSlotId,
+    });
+  },
+};

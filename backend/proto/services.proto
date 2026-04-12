@@ -1,0 +1,170 @@
+syntax = "proto3";
+
+package intelli_reserve.services;
+
+import "common.proto";
+
+option go_package = "github.com/intelli-reserve/backend/gen/go/services";
+option java_multiple_files = true;
+option java_package = "com.intelli_reserve.services";
+
+// Services Management - handles service and time slot operations
+
+service ServicesManagement {
+  // Create a new service
+  rpc CreateService(CreateServiceRequest) returns (CreateServiceResponse);
+  
+  // Get service by ID
+  rpc GetService(GetServiceRequest) returns (GetServiceResponse);
+  
+  // Get services by host ID
+  rpc GetHostServices(GetHostServicesRequest) returns (GetHostServicesResponse);
+  
+  // Update service
+  rpc UpdateService(UpdateServiceRequest) returns (UpdateServiceResponse);
+  
+  // Delete service
+  rpc DeleteService(DeleteServiceRequest) returns (DeleteServiceResponse);
+  
+  // Create time slot
+  rpc CreateTimeSlot(CreateTimeSlotRequest) returns (CreateTimeSlotResponse);
+  
+  // Get time slot by ID
+  rpc GetTimeSlot(GetTimeSlotRequest) returns (GetTimeSlotResponse);
+  
+  // Get available time slots for service
+  rpc GetAvailableTimeSlots(GetAvailableTimeSlotsRequest) returns (GetAvailableTimeSlotsResponse);
+  
+  // Update time slot availability
+  rpc UpdateTimeSlotAvailability(UpdateTimeSlotAvailabilityRequest) returns (UpdateTimeSlotAvailabilityResponse);
+  
+  // Delete time slot
+  rpc DeleteTimeSlot(DeleteTimeSlotRequest) returns (DeleteTimeSlotResponse);
+}
+
+// Service Messages
+
+message CreateServiceRequest {
+  string host_id = 1;
+  string name = 2;
+  string description = 3;
+  string category = 4;
+  int32 duration_minutes = 5;
+  double base_price = 6;
+  int32 max_participants = 7;
+  bool is_active = 8;
+}
+
+message CreateServiceResponse {
+  bool success = 1;
+  intelli_reserve.common.Service service = 2;
+  string error_message = 3;
+}
+
+message GetServiceRequest {
+  string service_id = 1;
+}
+
+message GetServiceResponse {
+  bool success = 1;
+  intelli_reserve.common.Service service = 2;
+  string error_message = 3;
+}
+
+message GetHostServicesRequest {
+  string host_id = 1;
+  bool only_active = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}
+
+message GetHostServicesResponse {
+  bool success = 1;
+  repeated intelli_reserve.common.Service services = 2;
+  int32 total_count = 3;
+  string error_message = 4;
+}
+
+message UpdateServiceRequest {
+  string service_id = 1;
+  optional string name = 2;
+  optional string description = 3;
+  optional string category = 4;
+  optional int32 duration_minutes = 5;
+  optional double base_price = 6;
+  optional int32 max_participants = 7;
+  optional bool is_active = 8;
+}
+
+message UpdateServiceResponse {
+  bool success = 1;
+  intelli_reserve.common.Service service = 2;
+  string error_message = 3;
+}
+
+message DeleteServiceRequest {
+  string service_id = 1;
+}
+
+message DeleteServiceResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
+// Time Slot Messages
+
+message CreateTimeSlotRequest {
+  string service_id = 1;
+  string date = 2; // YYYY-MM-DD
+  string start_time = 3; // HH:MM:SS
+  string end_time = 4; // HH:MM:SS
+  bool is_available = 5;
+}
+
+message CreateTimeSlotResponse {
+  bool success = 1;
+  intelli_reserve.common.TimeSlot time_slot = 2;
+  string error_message = 3;
+}
+
+message GetTimeSlotRequest {
+  string time_slot_id = 1;
+}
+
+message GetTimeSlotResponse {
+  bool success = 1;
+  intelli_reserve.common.TimeSlot time_slot = 2;
+  string error_message = 3;
+}
+
+message GetAvailableTimeSlotsRequest {
+  string service_id = 1;
+  string date_from = 2; // YYYY-MM-DD
+  string date_to = 3; // YYYY-MM-DD
+}
+
+message GetAvailableTimeSlotsResponse {
+  bool success = 1;
+  repeated intelli_reserve.common.TimeSlot time_slots = 2;
+  string error_message = 3;
+}
+
+message UpdateTimeSlotAvailabilityRequest {
+  string time_slot_id = 1;
+  bool is_available = 2;
+}
+
+message UpdateTimeSlotAvailabilityResponse {
+  bool success = 1;
+  intelli_reserve.common.TimeSlot time_slot = 2;
+  string error_message = 3;
+}
+
+message DeleteTimeSlotRequest {
+  string time_slot_id = 1;
+}
+
+message DeleteTimeSlotResponse {
+  bool success = 1;
+  string error_message = 2;
+}

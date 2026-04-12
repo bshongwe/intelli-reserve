@@ -3,55 +3,30 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Calendar, DollarSign, Users, TrendingUp, Clock, AlertCircle } from "lucide-react";
-import { format } from "date-fns";
+import { Calendar, DollarSign, Users, TrendingUp, AlertCircle } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
-
-// Mock data – replace with real BFF calls later
-const mockRevenueData = [
-  { month: "Jan", revenue: 124000 },
-  { month: "Feb", revenue: 158000 },
-  { month: "Mar", revenue: 132000 },
-  { month: "Apr", revenue: 189000 },
-  { month: "May", revenue: 214000 },
-];
-
-const mockOccupancyData = [
-  { day: "Mon", occupancy: 65 },
-  { day: "Tue", occupancy: 82 },
-  { day: "Wed", occupancy: 78 },
-  { day: "Thu", occupancy: 91 },
-  { day: "Fri", occupancy: 95 },
-  { day: "Sat", occupancy: 88 },
-  { day: "Sun", occupancy: 72 },
-];
-
-const upcomingBookings = [
-  { id: "bk-8921", client: "Sarah Chen", service: "Consultation", time: "2026-04-12 10:00", status: "confirmed", amount: 2500 },
-  { id: "bk-8923", client: "Marcus Okoro", service: "Photography Session", time: "2026-04-13 14:30", status: "pending", amount: 4500 },
-  { id: "bk-8924", client: "Elena Petrova", service: "Workshop", time: "2026-04-15 09:00", status: "confirmed", amount: 12000 },
-];
-
-const recentReleases = [
-  { id: "bk-8901", client: "David Kim", amount: 3200, releasedAt: "2026-04-08" },
-  { id: "bk-8897", client: "Aisha Patel", amount: 8900, releasedAt: "2026-04-07" },
-];
+import { analyticsAPI } from "@/lib/api";
 
 export default function HostDashboard() {
-  // Example query to BFF – replace with your real endpoint
-  const { data: stats } = useQuery({
-    queryKey: ["host-stats"],
-    queryFn: async () => {
-      return {
-        totalBookings: 142,
-        totalRevenue: 487500,
-        pendingEscrow: 124000,
-        occupancyRate: 87,
-      };
-    },
+  // Get host ID from auth context (TODO: implement auth)
+  const hostId = "host-001"; // Placeholder - should come from auth context
+
+  // Fetch dashboard metrics
+  const { data: dashboardData, isLoading } = useQuery({
+    queryKey: ["dashboard-metrics", hostId],
+    queryFn: () => analyticsAPI.getDashboardMetrics(hostId),
   });
+
+  const revenueData = dashboardData?.revenueData || [];
+  const occupancyData = dashboardData?.occupancyData || [];
+
+  if (isLoading) {
+    return (
+      <div className="space-y-8 py-6 px-3 sm:px-4 md:px-6 lg:px-8">
+        <p className="text-sm text-muted-foreground">Loading dashboard...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 py-6 px-3 sm:px-4 md:px-6 lg:px-8">
@@ -68,8 +43,8 @@ export default function HostDashboard() {
             <Users className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground shrink-0" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl sm:text-3xl font-bold">{stats?.totalBookings || 142}</div>
-            <p className="text-xs text-muted-foreground mt-1">+12 from last month</p>
+            <div className="text-2xl sm:text-3xl font-bold">{dashboardData?.upcomingBookings || 0}</div>
+            <p className="text-xs text-muted-foreground mt-1">Upcoming services</p>
           </CardContent>
         </Card>
 
@@ -79,30 +54,30 @@ export default function HostDashboard() {
             <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground shrink-0" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl sm:text-3xl font-bold truncate">R{stats?.totalRevenue?.toLocaleString() || "487,500"}</div>
-            <p className="text-xs text-muted-foreground mt-1">+18% from last month</p>
+            <div className="text-2xl sm:text-3xl font-bold truncate">{dashboardData?.totalRevenue || "R0"}</div>
+            <p className="text-xs text-muted-foreground mt-1">This period</p>
           </CardContent>
         </Card>
 
         <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium">Pending Escrow</CardTitle>
-            <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground shrink-0" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl sm:text-3xl font-bold truncate">R{stats?.pendingEscrow?.toLocaleString() || "124,000"}</div>
-            <p className="text-xs text-muted-foreground mt-1">Held until completion</p>
-          </CardContent>
-        </Card>
-
-        <Card className="overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium">Occupancy Rate</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium">Avg Occupancy</CardTitle>
             <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground shrink-0" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl sm:text-3xl font-bold">{stats?.occupancyRate || 87}%</div>
-            <p className="text-xs text-muted-foreground mt-1">This week</p>
+            <div className="text-2xl sm:text-3xl font-bold">82%</div>
+            <p className="text-xs text-muted-foreground mt-1">Week average</p>
+          </CardContent>
+        </Card>
+
+        <Card className="overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium">Response Rate</CardTitle>
+            <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground shrink-0" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl sm:text-3xl font-bold">96%</div>
+            <p className="text-xs text-muted-foreground mt-1">Very responsive</p>
           </CardContent>
         </Card>
       </div>
@@ -117,7 +92,7 @@ export default function HostDashboard() {
           <CardContent>
             <div className="w-full overflow-x-auto">
               <ResponsiveContainer width="100%" height={280} minWidth={250}>
-                <LineChart data={mockRevenueData}>
+                <LineChart data={revenueData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                   <YAxis tick={{ fontSize: 12 }} />
@@ -138,7 +113,7 @@ export default function HostDashboard() {
           <CardContent>
             <div className="w-full overflow-x-auto">
               <ResponsiveContainer width="100%" height={280} minWidth={250}>
-                <BarChart data={mockOccupancyData}>
+                <BarChart data={occupancyData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="day" tick={{ fontSize: 12 }} />
                   <YAxis tick={{ fontSize: 12 }} />
@@ -169,28 +144,9 @@ export default function HostDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3 sm:space-y-4">
-              {upcomingBookings.map((booking) => (
-                <div key={booking.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3 border-b pb-3 sm:pb-4 last:border-0 last:pb-0">
-                  <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                    <Avatar className="h-8 w-8 shrink-0">
-                      <AvatarFallback className="text-xs">{booking.client.split(" ").map((n) => n[0]).join("")}</AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{booking.client}</p>
-                      <p className="text-xs text-muted-foreground truncate">{booking.service}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 sm:gap-3 shrink-0 w-full sm:w-auto justify-between sm:justify-end">
-                    <div className="text-right">
-                      <p className="text-xs sm:text-sm font-semibold">R{booking.amount}</p>
-                      <p className="text-xs text-muted-foreground">{format(new Date(booking.time), "MMM dd")}</p>
-                    </div>
-                    <Badge variant={booking.status === "confirmed" ? "default" : "secondary"} className="text-xs shrink-0">
-                      {booking.status}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
+              <div className="text-center py-8 text-muted-foreground">
+                <p className="text-sm">Booking data coming soon from API</p>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -208,23 +164,9 @@ export default function HostDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3 sm:space-y-4">
-              {recentReleases.map((release) => (
-                <div key={release.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3 border-b pb-3 sm:pb-4 last:border-0 last:pb-0">
-                  <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-emerald-100 dark:bg-emerald-900 flex items-center justify-center shrink-0">
-                      <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-600" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{release.client}</p>
-                      <p className="text-xs text-muted-foreground">Booking #{release.id}</p>
-                    </div>
-                  </div>
-                  <div className="text-right shrink-0 w-full sm:w-auto">
-                    <p className="text-sm font-semibold text-emerald-600">+R{release.amount}</p>
-                    <p className="text-xs text-muted-foreground">{format(new Date(release.releasedAt), "MMM dd")}</p>
-                  </div>
-                </div>
-              ))}
+              <div className="text-center py-8 text-muted-foreground">
+                <p className="text-sm">Escrow data coming soon from API</p>
+              </div>
             </div>
           </CardContent>
         </Card>

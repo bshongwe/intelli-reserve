@@ -23,47 +23,7 @@ import { useServiceSelection } from "@/hooks/useServiceSelection";
 import { ServiceFilters } from "@/components/services/ServiceFilters";
 import { BulkActionsBar } from "@/components/services/BulkActionsBar";
 import { serviceSchema, type ServiceFormData } from "@/schemas/serviceSchema";
-
-interface Service extends ServiceFormData {
-  id: string;
-  createdAt: string;
-}
-
-const mockServices: Service[] = [
-  {
-    id: "svc-001",
-    name: "Portrait Photography Session",
-    description: "Professional studio or on-location portrait session including 10 edited photos.",
-    durationMinutes: 90,
-    basePrice: 2500,
-    maxParticipants: 1,
-    isActive: true,
-    category: "Photography" as const,
-    createdAt: "2026-01-15",
-  },
-  {
-    id: "svc-002",
-    name: "Business Consulting Call",
-    description: "1-on-1 strategy session for startups and small businesses.",
-    durationMinutes: 60,
-    basePrice: 1800,
-    maxParticipants: 1,
-    isActive: true,
-    category: "Consulting" as const,
-    createdAt: "2026-02-01",
-  },
-  {
-    id: "svc-003",
-    name: "Group Workshop: Digital Marketing",
-    description: "Interactive workshop for up to 12 participants.",
-    durationMinutes: 180,
-    basePrice: 850,
-    maxParticipants: 12,
-    isActive: false,
-    category: "Workshop" as const,
-    createdAt: "2026-03-10",
-  },
-];
+import { servicesAPI, type Service } from "@/lib/api";
 
 export default function HostServicesPage() {
   const router = useRouter();
@@ -92,10 +52,13 @@ export default function HostServicesPage() {
     },
   });
 
+  // Get host ID from auth context (TODO: implement auth)
+  const hostId = "host-001"; // Placeholder - should come from auth context
+
   // Fetch services
-  const { data: services = mockServices } = useQuery({
-    queryKey: ["host-services"],
-    queryFn: async () => mockServices,
+  const { data: services = [] } = useQuery({
+    queryKey: ["host-services", hostId],
+    queryFn: () => servicesAPI.getHostServices(hostId),
   });
 
   // Filter and search hook
@@ -121,11 +84,14 @@ export default function HostServicesPage() {
   // Mutations
   const createOrUpdateMutation = useMutation({
     mutationFn: async (service: ServiceFormData) => {
-      await new Promise((resolve) => setTimeout(resolve, 600));
-      return service;
+      if (editingService) {
+        return servicesAPI.updateService(editingService.id, service);
+      } else {
+        return servicesAPI.createService(hostId, service);
+      }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["host-services"] });
+      queryClient.invalidateQueries({ queryKey: ["host-services", hostId] });
       toast({
         title: editingService ? "Service Updated" : "Service Created",
         description: "Your service has been saved successfully.",
@@ -134,48 +100,68 @@ export default function HostServicesPage() {
       setEditingService(null);
       reset();
     },
-    onError: () => {
+    onError: (error) => {
       toast({
         title: "Error",
-        description: "Failed to save service. Please try again.",
+        description: error.message || "Failed to save service. Please try again.",
         variant: "destructive",
       });
     },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (ids: string[]) => {
-      await new Promise((resolve) => setTimeout(resolve, 400));
-      return ids;
-    },
+    mutationFn: (ids: string[]) => servicesAPI.bulkDeleteServices(ids),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["host-services"] });
+      queryClient.invalidateQueries({ queryKey: ["host-services", hostId] });
       toast({ title: "Services Deleted", variant: "destructive" });
       clearSelection();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete services.",
+        variant: "destructive",
+      });
     },
   });
 
   const bulkActivateMutation = useMutation({
     mutationFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 400));
-      return selectedIds;
+      await Promise.all(
+        selectedIds.map((id) => servicesAPI.toggleServiceStatus(id, true))
+      );
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["host-services"] });
+      queryClient.invalidateQueries({ queryKey: ["host-services", hostId] });
       toast({ title: `${selectedIds.length} services activated` });
       clearSelection();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to activate services.",
+        variant: "destructive",
+      });
     },
   });
 
   const bulkDeactivateMutation = useMutation({
     mutationFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 400));
-      return selectedIds;
+      await Promise.all(
+        selectedIds.map((id) => servicesAPI.toggleServiceStatus(id, false))
+      );
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["host-services"] });
+      queryClient.invalidateQueries({ queryKey: ["host-services", hostId] });
       toast({ title: `${selectedIds.length} services deactivated` });
       clearSelection();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to deactivate services.",
+        variant: "destructive",
+      });
     },
   });
 
@@ -183,7 +169,7 @@ export default function HostServicesPage() {
     setEditingService(service);
     setValue("name", service.name);
     setValue("description", service.description);
-    setValue("category", service.category);
+    setValue("category", service.category as "Photography" | "Consulting" | "Workshop" | "Coaching" | "Other");
     setValue("durationMinutes", service.durationMinutes);
     setValue("basePrice", service.basePrice);
     setValue("maxParticipants", service.maxParticipants);

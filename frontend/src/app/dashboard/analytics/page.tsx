@@ -9,37 +9,39 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MetricCard } from "@/components/analytics/MetricCard";
 import { StatBadge } from "@/components/analytics/StatBadge";
 import { useState } from "react";
-
-// Mock data
-const revenueData = [
-  { month: "Jan", revenue: 4000, bookings: 24 },
-  { month: "Feb", revenue: 3000, bookings: 18 },
-  { month: "Mar", revenue: 2000, bookings: 22 },
-  { month: "Apr", revenue: 2780, bookings: 20 },
-  { month: "May", revenue: 1890, bookings: 28 },
-  { month: "Jun", revenue: 2390, bookings: 32 },
-];
-
-const bookingStatusData = [
-  { name: "Completed", value: 65, color: "var(--analytics-completed)" },
-  { name: "Pending", value: 20, color: "var(--analytics-pending)" },
-  { name: "Cancelled", value: 15, color: "var(--analytics-cancelled)" },
-];
-
-const topServices = [
-  { id: 1, name: "Portrait Photography", bookings: 24, revenue: 2500 },
-  { id: 2, name: "Business Consulting", bookings: 18, revenue: 1800 },
-  { id: 3, name: "Workshop", bookings: 15, revenue: 850 },
-];
-
-const topCustomers = [
-  { id: 1, name: "John Doe", bookings: 5, totalSpent: 2500 },
-  { id: 2, name: "Jane Smith", bookings: 4, totalSpent: 2000 },
-  { id: 3, name: "Bob Johnson", bookings: 3, totalSpent: 1500 },
-];
+import { useQuery } from "@tanstack/react-query";
+import { analyticsAPI } from "@/lib/api";
 
 export default function AnalyticsDashboardPage() {
-  const [timeRange, setTimeRange] = useState("6m");
+  const [timeRange, setTimeRange] = useState<"1m" | "3m" | "6m" | "1y">("6m");
+  
+  // Get host ID from auth context (TODO: implement auth)
+  const hostId = "host-001"; // Placeholder - should come from auth context
+
+  // Fetch analytics data
+  const { data: analyticsData, isLoading } = useQuery({
+    queryKey: ["analytics", hostId, timeRange],
+    queryFn: () => analyticsAPI.getAnalytics(hostId, timeRange),
+  });
+
+  const revenueData = analyticsData?.revenueData || [];
+  const bookingStatusData = analyticsData?.bookingStatusData || [];
+  const topServices = analyticsData?.topServices || [];
+  const topCustomers = analyticsData?.topCustomers || [];
+  const metrics = analyticsData?.metrics || {
+    totalRevenue: "R0",
+    totalBookings: 0,
+    activeCustomers: 0,
+    avgRating: 0,
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6 sm:space-y-8 py-3 sm:py-4 md:py-6 px-3 sm:px-4 md:px-6 lg:px-8">
+        <p className="text-sm text-muted-foreground">Loading analytics...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 sm:space-y-8 py-3 sm:py-4 md:py-6 px-3 sm:px-4 md:px-6 lg:px-8">
@@ -50,7 +52,7 @@ export default function AnalyticsDashboardPage() {
           <p className="text-xs sm:text-sm text-muted-foreground mt-1">Track your performance and insights</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
-          <Select value={timeRange} onValueChange={setTimeRange}>
+          <Select value={timeRange} onValueChange={(value: any) => setTimeRange(value)}>
             <SelectTrigger className="w-full sm:w-auto md:w-40 text-xs sm:text-sm">
               <SelectValue />
             </SelectTrigger>
@@ -71,28 +73,28 @@ export default function AnalyticsDashboardPage() {
       <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <MetricCard
           label="Total Revenue"
-          value="R15,890"
+          value={metrics.totalRevenue}
           icon={TrendingUp}
           trend={{ value: 12, isPositive: true }}
           variant="success"
         />
         <MetricCard
           label="Total Bookings"
-          value="144"
+          value={metrics.totalBookings.toString()}
           icon={Calendar}
           trend={{ value: 8, isPositive: true }}
           variant="default"
         />
         <MetricCard
           label="Active Customers"
-          value="32"
+          value={metrics.activeCustomers.toString()}
           icon={Users}
           trend={{ value: 5, isPositive: true }}
           variant="default"
         />
         <MetricCard
           label="Avg Rating"
-          value="4.8"
+          value={metrics.avgRating.toFixed(1)}
           icon={Star}
           trend={{ value: 2, isPositive: true }}
           variant="success"

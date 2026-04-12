@@ -1,6 +1,10 @@
 -- Migration: 001_init_schema.sql
 -- Created: 2026-04-12
 -- Purpose: Initialize database schema for IntelliReserve
+-- ⚠️  DEPRECATED: See migration 002 for current schema
+-- Note: This migration uses a "hosts" table, but the current production 
+--       schema uses a "users" table instead. See 002_align_schema_with_users_table.sql
+--       for the actual schema in use.
 
 -- Create extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";

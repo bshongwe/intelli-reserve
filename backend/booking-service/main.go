@@ -132,25 +132,3 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 		"grpc":    "available on :8090",
 	})
 }
-
-func main() {
-	// Start REST API server
-	go func() {
-		http.HandleFunc("/health", healthHandler)
-		http.HandleFunc("/v1/bookings", createBookingHandler)
-
-		port := ":8080"
-		log.Printf("🚀 Booking Service running on %s", port)
-
-		if err := http.ListenAndServe(port, nil); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Server error: %v", err)
-		}
-	}()
-
-	// Graceful shutdown
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-	<-sigChan
-
-	log.Println("Shutting down booking service...")
-}

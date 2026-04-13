@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
+import path from 'node:path';
 import { Pool } from 'pg';
 import bookingRoutes from './routes/booking.routes';
 import createDashboardRoutes from './routes/dashboard.routes';
@@ -11,10 +12,20 @@ import createUserRoutes from './routes/users.routes';
 import createAuthRoutes from './routes/auth.routes';
 import { initializeGRPCClients, closeGRPCClients } from './grpc/client';
 
+// Load .env.local first
+dotenv.config({ path: path.resolve(__dirname, '../.env.local') });
+// Then load .env as fallback
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Log database configuration (debug)
+console.log('Database Config:');
+console.log('  DB_USER:', process.env.DB_USER || 'postgres');
+console.log('  DB_HOST:', process.env.DB_HOST || 'localhost');
+console.log('  DB_PORT:', process.env.DB_PORT || '5432');
+console.log('  DB_NAME:', process.env.DB_NAME || 'intelli_reserve');
 
 // Database connection pool
 const pool = new Pool({
@@ -23,6 +34,8 @@ const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
   port: Number.parseInt(process.env.DB_PORT || '5432'),
   database: process.env.DB_NAME || 'intelli_reserve',
+  statement_timeout: 10000,
+  query_timeout: 10000,
 });
 
 pool.on('error', (err: Error) => {

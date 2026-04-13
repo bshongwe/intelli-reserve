@@ -115,6 +115,7 @@ export default function LoginPage() {
           </div>
 
           {/* Development Helper - Remove in production */}
+          {process.env.NODE_ENV !== 'production' && (
           <div className="mt-6 pt-4 border-t">
             <p className="text-xs text-muted-foreground mb-2">Demo Credentials (Development Only):</p>
             <div className="space-y-1 text-xs">
@@ -123,6 +124,7 @@ export default function LoginPage() {
               <p>Password: <code className="bg-muted px-2 py-1 rounded">Demo@123</code></p>
             </div>
           </div>
+          )}
         </CardContent>
       </Card>
     </div>

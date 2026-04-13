@@ -183,6 +183,7 @@ export default function SignupPage() {
                 isSubmitting ||
                 !formData.email ||
                 !formData.password ||
+                !formData.confirmPassword ||
                 !formData.fullName
               }
             >

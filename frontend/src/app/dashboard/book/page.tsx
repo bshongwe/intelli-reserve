@@ -10,9 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { bookingsAPI } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import { format } from "date-fns";
 
 export default function BookPage() {
+  const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [inventoryId, setInventoryId] = useState("");
   const { toast } = useToast();
@@ -44,7 +46,7 @@ export default function BookPage() {
     bookingMutation.mutate({
       serviceId: inventoryId,  // Use inventoryId as serviceId
       timeSlotId: "620825a4-4db2-4c7c-a291-40351d593a65",  // Fixed valid time slot ID
-      hostId: "host-001",  // Fixed host ID for test service
+      hostId: user?.id ?? "",  // from auth context
       clientName: "Client User",  // Placeholder clientName
       clientEmail: "client@example.com",  // Placeholder clientEmail
       clientPhone: "+1234567890",  // Placeholder clientPhone

@@ -28,6 +28,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { servicesAPI, timeSlotsAPI } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import { DraggableTimeSlot } from "@/components/calendar/DraggableTimeSlot";
 import { RecurringSlotGenerator } from "@/components/calendar/RecurringSlotGenerator";
 
@@ -35,8 +36,8 @@ export default function AvailabilityCalendarPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // TODO: Replace with actual auth integration to get real hostId
-  const hostId = "host-001";
+  const { user } = useAuth();
+  const hostId = user?.id ?? "";
 
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [selectedServiceId, setSelectedServiceId] = useState<string | undefined>();

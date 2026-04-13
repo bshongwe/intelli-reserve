@@ -19,6 +19,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Save, Upload, User, Bell, CreditCard, Shield, Trash2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { userAPI } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 
 const profileSchema = z.object({
   fullName: z.string().min(2, "Name must be at least 2 characters"),
@@ -32,8 +33,8 @@ const profileSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
 export default function HostSettingsPage() {
-  // TODO: Replace with actual auth integration to get real hostId
-  const hostId = "host-001";
+  const { user } = useAuth();
+  const hostId = user?.id ?? "";
 
   const [activeTab, setActiveTab] = useState("profile");
   const queryClient = useQueryClient();

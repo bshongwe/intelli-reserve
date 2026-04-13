@@ -60,7 +60,7 @@ app.use('/api/auth', createAuthRoutes(pool));
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/dashboard', createDashboardRoutes(pool));
 app.use('/api/services', createServiceRoutes(pool));
-app.use('/api/analytics', createAnalyticsRoutes(pool));
+app.use('/api/analytics', createAnalyticsRoutes());
 app.use('/api/users', createUserRoutes(pool));
 
 // Global error handler

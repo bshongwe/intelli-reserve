@@ -20,6 +20,7 @@ const clientNavItems = [
   { href: "/dashboard/book", icon: Search, label: "Book a Service" },
   { href: "/dashboard/client/bookings", icon: Calendar, label: "My Bookings" },
   { href: "/dashboard/profile", icon: User, label: "Profile" },
+  { href: "/dashboard/client/settings", icon: Settings, label: "Settings" },
 ];
 
 export function Sidebar() {

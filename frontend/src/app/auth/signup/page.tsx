@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Logo } from "@/components/common/Logo";
+import { AIAssistant } from "@/components/common/AIAssistant";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -73,8 +74,9 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md shadow-xl">
+    <>
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="space-y-4 text-center">
           <div className="flex justify-center">
             <Logo />
@@ -197,5 +199,7 @@ export default function SignupPage() {
         </CardContent>
       </Card>
     </div>
+    <AIAssistant />
+    </>
   );
 }

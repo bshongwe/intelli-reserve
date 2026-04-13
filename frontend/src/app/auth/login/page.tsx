@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Logo } from "@/components/common/Logo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -45,11 +46,16 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-xl">
-        <CardHeader className="space-y-2">
-          <CardTitle className="text-2xl">Login</CardTitle>
-          <CardDescription>Sign in to your IntelliReserve account</CardDescription>
+        <CardHeader className="space-y-4 text-center">
+          <div className="flex justify-center">
+            <Logo />
+          </div>
+          <div className="space-y-2">
+            <CardTitle className="text-2xl">Login</CardTitle>
+            <CardDescription>Sign in to your IntelliReserve account</CardDescription>
+          </div>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">

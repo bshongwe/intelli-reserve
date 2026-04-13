@@ -66,8 +66,8 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Login failed");
+        const data = await response.json();
+        throw new Error(data.error || "Login failed");
       }
 
       const data = await response.json();
@@ -105,8 +105,8 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Signup failed");
+        const data = await response.json();
+        throw new Error(data.error || "Signup failed");
       }
 
       const data = await response.json();

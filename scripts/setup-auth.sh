@@ -30,8 +30,8 @@ CREATE INDEX IF NOT EXISTS idx_users_email_active ON users(email, is_active);
 -- Password: Demo@123 -> $2b$12$...
 INSERT INTO users (id, full_name, business_name, email, phone, password_hash, user_type, is_active)
 VALUES 
-  ('host-001', 'Demo Host', 'Demo Hosting', 'host@demo.com', '555-1234', '\$2b\$12\$N9qo8uLOickgx2ZMRZoMyeIjZAgcg7b3XeKeUxWdeS86xVXAaxe9G', 'host', true),
-  ('client-001', 'Demo Client', 'Demo Client', 'client@demo.com', '555-5678', '\$2b\$12\$N9qo8uLOickgx2ZMRZoMyeIjZAgcg7b3XeKeUxWdeS86xVXAaxe9G', 'client', true)
+  ('a0000000-0000-0000-0000-000000000001', 'Demo Host', 'Demo Hosting', 'host@demo.com', '555-1234', '\$2b\$12\$N9qo8uLOickgx2ZMRZoMyeIjZAgcg7b3XeKeUxWdeS86xVXAaxe9G', 'host', true),
+  ('b0000000-0000-0000-0000-000000000001', 'Demo Client', 'Demo Client', 'client@demo.com', '555-5678', '\$2b\$12\$N9qo8uLOickgx2ZMRZoMyeIjZAgcg7b3XeKeUxWdeS86xVXAaxe9G', 'client', true)
 ON CONFLICT (email) DO NOTHING;
 
 SELECT '✅ Authentication schema setup complete!' as result;

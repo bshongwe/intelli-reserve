@@ -16,7 +16,15 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && cd .. && pwd)"
+
+cleanup() {
+  echo ""
+  echo -e "${YELLOW}Shutting down services...${NC}"
+  [ -n "$BFF_PID" ] && kill "$BFF_PID" 2>/dev/null
+  [ -n "$FRONTEND_PID" ] && kill "$FRONTEND_PID" 2>/dev/null
+}
+trap cleanup SIGINT SIGTERM
 
 echo -e "${BLUE}Step 1/3: Starting Database...${NC}"
 cd "$PROJECT_ROOT"

@@ -42,8 +42,8 @@ const FAQ_DATA: FAQItem[] = [
     id: "login-3",
     category: "login",
     question: "What are the demo credentials for testing?",
-    answer: "Host Account: host@demo.com (Password: Demo@123)\nClient Account: client@demo.com (Password: Demo@123)\nThese are for development/testing only.",
-    keywords: ["demo", "test", "credentials", "test account"],
+    answer: "Demo accounts are available in development only — see internal docs or contact an admin for access.",
+    keywords: ["demo", "test", "account"],
   },
   {
     id: "login-4",
@@ -247,8 +247,8 @@ export function AIAssistant() {
         <Button
           onClick={() => setIsOpen(true)}
           size="lg"
-          className="fixed bottom-6 right-6 rounded-full shadow-lg w-14 h-14 p-0 gap-0"
-          title="Open AI Assistant"
+          className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 rounded-full shadow-lg w-14 h-14 p-0 gap-0"
+          aria-label="Open AI assistant"
         >
           <MessageCircle className="w-5 h-5" />
         </Button>
@@ -256,7 +256,7 @@ export function AIAssistant() {
 
       {/* Chat Window */}
       {isOpen && (
-        <Card className="fixed bottom-6 right-6 w-96 max-h-[600px] shadow-2xl flex flex-col border-2">
+        <Card className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 w-full max-w-sm sm:w-96 max-h-[600px] shadow-2xl flex flex-col border-2">
           {/* Header */}
           <CardHeader className="flex flex-row items-center justify-between pb-3 border-b bg-gradient-to-r from-primary/10 to-rose-600/10">
             <div className="flex items-center gap-2">
@@ -276,6 +276,7 @@ export function AIAssistant() {
                 setSelectedCategory(null);
               }}
               className="h-8 w-8"
+              aria-label="Close AI assistant"
             >
               <X className="w-4 h-4" />
             </Button>
@@ -343,7 +344,7 @@ export function AIAssistant() {
               disabled={isLoading}
               className="text-sm"
             />
-            <Button type="submit" size="icon" disabled={isLoading || !inputValue.trim()} className="h-10 w-10">
+            <Button type="submit" size="icon" disabled={isLoading || !inputValue.trim()} className="h-10 w-10" aria-label="Send message">
               <Send className="w-4 h-4" />
             </Button>
           </form>

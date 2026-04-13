@@ -8,30 +8,31 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { analyticsAPI, bookingsAPI } from "@/lib/api";
 import { DashboardLoadingSkeleton } from "@/components/common/DashboardLoadingSkeleton";
 import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/lib/auth-context";
 
 export default function HostDashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
-  // Get host ID from auth context (TODO: implement auth)
-  const hostId = "host-001"; // Placeholder - should come from auth context
+  const { user } = useAuth();
+  const hostId = user?.id ?? "";
 
   // Fetch dashboard metrics with optimized caching
   const { data: dashboardData, isLoading } = useQuery({
     queryKey: ["dashboard-metrics", hostId],
     queryFn: () => analyticsAPI.getDashboardMetrics(hostId),
-    staleTime: 5 * 60 * 1000, // 5 minutes - keep data fresh
-    gcTime: 10 * 60 * 1000, // 10 minutes - cache period
-    refetchInterval: 30 * 1000, // Refetch every 30 seconds if window is focused
-    refetchIntervalInBackground: false, // Don't refetch in background
+    enabled: !!hostId,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchInterval: 30 * 1000,
+    refetchIntervalInBackground: false,
   });
 
-  // Fetch pending bookings
   const { data: pendingBookings = [], isLoading: bookingsLoading } = useQuery({
     queryKey: ["pending-bookings", hostId],
     queryFn: () => bookingsAPI.getHostBookings(hostId, 'pending'),
-    staleTime: 1 * 60 * 1000, // 1 minute - keep fresh
-    refetchInterval: 15 * 1000, // Refetch every 15 seconds
+    enabled: !!hostId,
+    staleTime: 1 * 60 * 1000,
+    refetchInterval: 15 * 1000,
   });
 
   // Confirm booking mutation

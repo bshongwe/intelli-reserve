@@ -12,9 +12,9 @@ export default function ClientDashboard() {
   const { user } = useAuth();
 
   const { data: bookings = [], isLoading } = useQuery({
-    queryKey: ["client-bookings", user?.id],
-    queryFn: () => bookingsAPI.getHostBookings(user?.id ?? "", undefined),
-    enabled: !!user?.id,
+    queryKey: ["client-bookings", user?.email],
+    queryFn: () => bookingsAPI.getClientBookings(user?.email ?? ""),
+    enabled: !!user?.email,
     staleTime: 60 * 1000,
   });
 

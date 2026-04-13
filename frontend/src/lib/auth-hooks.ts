@@ -47,29 +47,15 @@ export function useRequireUserType(requiredType: "host" | "client") {
  */
 export function useCurrentUserId(): string {
   const { user } = useAuth();
-  return user?.id ?? "dev-user-001";
+  return user?.id ?? "";
 }
 
-/**
- * Hook to get current host ID
- * Returns placeholder if not authenticated (for development)
- */
 export function useCurrentHostId(): string {
   const { user } = useAuth();
-  if (user?.userType !== "host") {
-    return "host-001"; // Placeholder
-  }
-  return user?.id ?? "host-001";
+  return user?.userType === "host" ? (user?.id ?? "") : "";
 }
 
-/**
- * Hook to get current client email
- * Returns placeholder if not authenticated (for development)
- */
 export function useCurrentClientEmail(): string {
   const { user } = useAuth();
-  if (user?.userType !== "client") {
-    return "client@example.com"; // Placeholder
-  }
-  return user?.email ?? "client@example.com";
+  return user?.userType === "client" ? (user?.email ?? "") : "";
 }

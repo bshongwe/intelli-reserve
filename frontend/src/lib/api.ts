@@ -2,7 +2,7 @@
  * API Service Layer - All communication with BFF backend
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_BFF_URL || 'http://localhost:3001/api';
+const API_BASE_URL = '/api';
 
 // Types
 export interface Service {

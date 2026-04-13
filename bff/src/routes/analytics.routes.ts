@@ -120,8 +120,8 @@ export function createAnalyticsRoutes(pool: Pool): Router {
         [hostId, months]
       );
 
-      // Total bookings in range
-      const totalBookingsInRange = revenueResult.rows.reduce((s, r) => s + r.bookings, 0);
+      // Total bookings in range — all statuses
+      const totalBookingsInRange = statusResult.rows.reduce((s, r) => s + r.count, 0);
       const totalRevenue = totalRevenueResult.rows[0]?.total ?? 0;
 
       const analyticsData: AnalyticsData = {

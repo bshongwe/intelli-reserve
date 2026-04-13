@@ -39,6 +39,8 @@ export default function AnalyticsDashboardPage() {
     activeCustomers: 0,
     avgRating: 0,
   };
+  const totalBookings = topServices.reduce((s: number, sv: any) => s + sv.bookings, 0);
+  const totalRevenue = topCustomers.reduce((s: number, c: any) => s + c.totalSpent, 0);
 
   if (isLoading) {
     return <DashboardLoadingSkeleton kpiCount={4} showCharts label="Loading analytics..." />;
@@ -224,7 +226,7 @@ export default function AnalyticsDashboardPage() {
                   <div className="text-right">
                     <p className="text-xs sm:text-sm font-semibold">R{service.revenue.toLocaleString()}</p>
                     <Badge variant="outline" className="text-xs mt-1">
-                      {Math.round((service.bookings / 57) * 100)}%
+                      {totalBookings > 0 ? Math.round((service.bookings / totalBookings) * 100) : 0}% of bookings
                     </Badge>
                   </div>
                 </div>
@@ -261,7 +263,7 @@ export default function AnalyticsDashboardPage() {
                     <p className="text-xs sm:text-sm font-semibold">R{customer.totalSpent.toLocaleString()}</p>
                     <StatBadge
                       label="Value"
-                      value={`${Math.round((customer.totalSpent / 6000) * 100)}%`}
+                      value={totalRevenue > 0 ? `${Math.round((customer.totalSpent / totalRevenue) * 100)}%` : '0%'}
                       variant="outline"
                       className="text-xs mt-1"
                     />

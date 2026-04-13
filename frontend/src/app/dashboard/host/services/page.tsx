@@ -24,6 +24,7 @@ import { ServiceFilters } from "@/components/services/ServiceFilters";
 import { BulkActionsBar } from "@/components/services/BulkActionsBar";
 import { serviceSchema, type ServiceFormData } from "@/schemas/serviceSchema";
 import { servicesAPI, type Service } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 
 export default function HostServicesPage() {
   const router = useRouter();
@@ -52,8 +53,8 @@ export default function HostServicesPage() {
     },
   });
 
-  // Get host ID from auth context (TODO: implement auth)
-  const hostId = "host-001"; // Placeholder - should come from auth context
+  const { user } = useAuth();
+  const hostId = user?.id ?? "";
 
   // Fetch services
   const { data: services = [] } = useQuery({

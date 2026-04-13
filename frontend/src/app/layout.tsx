@@ -3,6 +3,7 @@ import { Inter, Geist } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "next-themes";
 import { QueryClientProvider } from "./providers/QueryClientProvider";
+import { AuthProvider } from "@/lib/auth-context";
 import { Toaster } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
 
@@ -24,10 +25,12 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <QueryClientProvider>
-            {children}
-            <Toaster />
-          </QueryClientProvider>
+          <AuthProvider>
+            <QueryClientProvider>
+              {children}
+              <Toaster />
+            </QueryClientProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

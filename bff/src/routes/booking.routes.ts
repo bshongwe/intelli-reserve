@@ -23,6 +23,21 @@ const CancelBookingSchema = z.object({
   reason: z.string().optional(),
 });
 
+const mapBooking = (booking: any) => ({
+  id: booking.id,
+  serviceId: booking.serviceId,
+  timeSlotId: booking.timeSlotId,
+  hostId: booking.hostId,
+  clientName: booking.clientName,
+  clientEmail: booking.clientEmail,
+  clientPhone: booking.clientPhone,
+  numberOfParticipants: booking.numberOfParticipants,
+  status: booking.status,
+  notes: booking.notes,
+  createdAt: booking.createdAt,
+  updatedAt: booking.updatedAt,
+});
+
 router.post('/', async (req, res) => {
   try {
     const validated = CreateBookingSchema.parse(req.body);
@@ -39,20 +54,7 @@ router.post('/', async (req, res) => {
       validated.notes
     );
 
-    res.status(201).json({
-      id: response.booking?.id,
-      serviceId: response.booking?.serviceId,
-      timeSlotId: response.booking?.timeSlotId,
-      hostId: response.booking?.hostId,
-      clientName: response.booking?.clientName,
-      clientEmail: response.booking?.clientEmail,
-      clientPhone: response.booking?.clientPhone,
-      numberOfParticipants: response.booking?.numberOfParticipants,
-      status: response.booking?.status || 'pending',
-      notes: response.booking?.notes,
-      createdAt: response.booking?.createdAt,
-      updatedAt: response.booking?.updatedAt,
-    });
+    res.status(201).json(mapBooking(response.booking));
   } catch (error: any) {
     if (error.name === 'ZodError') {
       res.status(400).json({ error: 'Validation failed', details: error.errors });
@@ -63,41 +65,25 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Get bookings by host ID with optional status filter
+// Get bookings by hostId or clientEmail with optional status filter
 router.get('/', async (req, res) => {
   try {
-    const { hostId, status } = req.query;
+    const { hostId, clientEmail, status } = req.query;
+    const statusFilter = typeof status === 'string' ? status : undefined;
 
-    if (!hostId || typeof hostId !== 'string') {
-      return res.status(400).json({ error: 'hostId query parameter required' });
+    if (typeof clientEmail === 'string') {
+      const response = await BookingServiceAdapter.getClientBookings(clientEmail, statusFilter);
+      return res.json((response.bookings || []).map(mapBooking));
     }
 
-    // Call GetHostBookings with the status filter if provided
-    const statusFilter = (typeof status === 'string') ? status : undefined;
-    const response = await BookingServiceAdapter.getHostBookings(
-      hostId,
-      statusFilter
-    );
+    if (typeof hostId === 'string') {
+      const response = await BookingServiceAdapter.getHostBookings(hostId, statusFilter);
+      return res.json((response.bookings || []).map(mapBooking));
+    }
 
-    // Map response to Booking objects
-    const bookings = (response.bookings || []).map((booking: any) => ({
-      id: booking.id,
-      serviceId: booking.serviceId,
-      timeSlotId: booking.timeSlotId,
-      hostId: booking.hostId,
-      clientName: booking.clientName,
-      clientEmail: booking.clientEmail,
-      clientPhone: booking.clientPhone,
-      numberOfParticipants: booking.numberOfParticipants,
-      status: booking.status,
-      notes: booking.notes,
-      createdAt: booking.createdAt,
-      updatedAt: booking.updatedAt,
-    }));
-
-    res.json(bookings);
+    return res.status(400).json({ error: 'hostId or clientEmail query parameter required' });
   } catch (error: any) {
-    console.error('Error fetching host bookings:', error);
+    console.error('Error fetching bookings:', error);
     res.status(500).json({ error: 'Failed to fetch bookings', details: error.message });
   }
 });
@@ -113,20 +99,7 @@ router.get('/:bookingId', async (req, res) => {
 
     const response = await BookingServiceAdapter.getBooking(bookingId);
     
-    res.json({
-      id: response.booking?.id,
-      serviceId: response.booking?.serviceId,
-      timeSlotId: response.booking?.timeSlotId,
-      hostId: response.booking?.hostId,
-      clientName: response.booking?.clientName,
-      clientEmail: response.booking?.clientEmail,
-      clientPhone: response.booking?.clientPhone,
-      numberOfParticipants: response.booking?.numberOfParticipants,
-      status: response.booking?.status,
-      notes: response.booking?.notes,
-      createdAt: response.booking?.createdAt,
-      updatedAt: response.booking?.updatedAt,
-    });
+    res.json(mapBooking(response.booking));
   } catch (error: any) {
     console.error('Error fetching booking:', error);
     res.status(500).json({ error: 'Failed to fetch booking', details: error.message });
@@ -145,20 +118,7 @@ router.put('/:bookingId/status', async (req, res) => {
 
     const response = await BookingServiceAdapter.updateBookingStatus(bookingId, validated.status);
 
-    res.json({
-      id: response.booking?.id,
-      serviceId: response.booking?.serviceId,
-      timeSlotId: response.booking?.timeSlotId,
-      hostId: response.booking?.hostId,
-      clientName: response.booking?.clientName,
-      clientEmail: response.booking?.clientEmail,
-      clientPhone: response.booking?.clientPhone,
-      numberOfParticipants: response.booking?.numberOfParticipants,
-      status: response.booking?.status,
-      notes: response.booking?.notes,
-      createdAt: response.booking?.createdAt,
-      updatedAt: response.booking?.updatedAt,
-    });
+    res.json(mapBooking(response.booking));
   } catch (error: any) {
     if (error.name === 'ZodError') {
       res.status(400).json({ error: 'Validation failed', details: error.errors });
@@ -181,20 +141,7 @@ router.post('/:bookingId/cancel', async (req, res) => {
 
     const response = await BookingServiceAdapter.cancelBooking(bookingId, validated.reason);
 
-    res.json({
-      id: response.booking?.id,
-      serviceId: response.booking?.serviceId,
-      timeSlotId: response.booking?.timeSlotId,
-      hostId: response.booking?.hostId,
-      clientName: response.booking?.clientName,
-      clientEmail: response.booking?.clientEmail,
-      clientPhone: response.booking?.clientPhone,
-      numberOfParticipants: response.booking?.numberOfParticipants,
-      status: response.booking?.status,
-      notes: response.booking?.notes,
-      createdAt: response.booking?.createdAt,
-      updatedAt: response.booking?.updatedAt,
-    });
+    res.json(mapBooking(response.booking));
   } catch (error: any) {
     if (error.name === 'ZodError') {
       res.status(400).json({ error: 'Validation failed', details: error.errors });

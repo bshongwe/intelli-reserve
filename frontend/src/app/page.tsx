@@ -18,7 +18,7 @@ export default function Home() {
             Real-time booking engine with secure escrow payments and dynamic pricing intelligence.
           </p>
           <a
-            href="/dashboard/book"
+            href="/auth/login"
             className="inline-flex items-center gap-2 mt-4 px-8 py-3.5 bg-gradient-to-r from-primary to-rose-600 text-white font-semibold rounded-xl shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 hover:scale-105 transition-all duration-200 text-sm sm:text-base"
           >
             Get Started →
@@ -241,7 +241,7 @@ export default function Home() {
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">Ready to transform your bookings?</h2>
           <p className="text-muted-foreground mb-8 text-sm sm:text-base">Join thousands of businesses using IntelliReserve</p>
           <a
-            href="/dashboard/book"
+            href="/auth/login"
             className="inline-flex items-center gap-2 px-8 py-3.5 bg-gradient-to-r from-primary to-rose-600 text-white font-semibold rounded-xl shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 hover:scale-105 transition-all duration-200 text-sm sm:text-base"
           >
             Get Started Free →

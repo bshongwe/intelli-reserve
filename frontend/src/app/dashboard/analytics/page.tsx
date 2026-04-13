@@ -12,21 +12,21 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { analyticsAPI } from "@/lib/api";
 import { DashboardLoadingSkeleton } from "@/components/common/DashboardLoadingSkeleton";
+import { useAuth } from "@/lib/auth-context";
 
 export default function AnalyticsDashboardPage() {
   const [timeRange, setTimeRange] = useState<"1m" | "3m" | "6m" | "1y">("6m");
-  
-  // Get host ID from auth context (TODO: implement auth)
-  const hostId = "host-001"; // Placeholder - should come from auth context
+  const { user } = useAuth();
+  const hostId = user?.id ?? "";
 
-  // Fetch analytics data with optimized caching
   const { data: analyticsData, isLoading } = useQuery({
     queryKey: ["analytics", hostId, timeRange],
     queryFn: () => analyticsAPI.getAnalytics(hostId, timeRange),
-    staleTime: 5 * 60 * 1000, // 5 minutes - keep data fresh
-    gcTime: 10 * 60 * 1000, // 10 minutes - cache period
-    refetchInterval: 60 * 1000, // Refetch every minute if window is focused
-    refetchIntervalInBackground: false, // Don't refetch in background
+    enabled: !!hostId,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchInterval: 60 * 1000,
+    refetchIntervalInBackground: false,
   });
 
   const revenueData = analyticsData?.revenueData || [];
@@ -39,6 +39,8 @@ export default function AnalyticsDashboardPage() {
     activeCustomers: 0,
     avgRating: 0,
   };
+  const totalBookings = topServices.reduce((s: number, sv: any) => s + sv.bookings, 0);
+  const totalRevenue = topCustomers.reduce((s: number, c: any) => s + c.totalSpent, 0);
 
   if (isLoading) {
     return <DashboardLoadingSkeleton kpiCount={4} showCharts label="Loading analytics..." />;
@@ -224,7 +226,7 @@ export default function AnalyticsDashboardPage() {
                   <div className="text-right">
                     <p className="text-xs sm:text-sm font-semibold">R{service.revenue.toLocaleString()}</p>
                     <Badge variant="outline" className="text-xs mt-1">
-                      {Math.round((service.bookings / 57) * 100)}%
+                      {totalBookings > 0 ? Math.round((service.bookings / totalBookings) * 100) : 0}% of bookings
                     </Badge>
                   </div>
                 </div>
@@ -261,7 +263,7 @@ export default function AnalyticsDashboardPage() {
                     <p className="text-xs sm:text-sm font-semibold">R{customer.totalSpent.toLocaleString()}</p>
                     <StatBadge
                       label="Value"
-                      value={`${Math.round((customer.totalSpent / 6000) * 100)}%`}
+                      value={totalRevenue > 0 ? `${Math.round((customer.totalSpent / totalRevenue) * 100)}%` : '0%'}
                       variant="outline"
                       className="text-xs mt-1"
                     />

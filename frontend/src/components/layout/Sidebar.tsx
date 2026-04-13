@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Calendar, BarChart3, Users, LogOut, Zap, Settings, Briefcase, User, Home, Search } from "lucide-react";
+import { Calendar, BarChart3, LogOut, Zap, Settings, Briefcase, User, Home, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
@@ -27,7 +27,7 @@ export function Sidebar() {
   const router = useRouter();
   const { user, logout } = useAuth();
 
-  const navItems = user?.userType === "host" ? hostNavItems : clientNavItems;
+  const navItems = user ? (user.userType === "host" ? hostNavItems : clientNavItems) : [];
 
   const handleLogout = async () => {
     await logout();

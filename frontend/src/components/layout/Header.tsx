@@ -23,6 +23,7 @@ export function Header() {
       router.push("/auth/login");
     } catch (error) {
       console.error("Logout error:", error);
+    } finally {
       setIsLoggingOut(false);
     }
   };
@@ -37,7 +38,9 @@ export function Header() {
 
   // Get user initials for avatar
   const initials = user?.fullName
-    ?.split(" ")
+    ?.trim()
+    .split(/\s+/)
+    .filter(Boolean)
     .map((n) => n[0])
     .join("")
     .toUpperCase() || "U";

@@ -6,7 +6,7 @@ const nextConfig = {
       beforeFiles: [
         {
           source: '/api/:path*',
-          destination: `${process.env.NEXT_PUBLIC_BFF_URL || 'http://localhost:3001'}/api/:path*`,
+          destination: `${process.env.BFF_URL || 'http://localhost:3001'}/api/:path*`,
         },
       ],
     };

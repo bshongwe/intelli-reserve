@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import { Pool } from 'pg';
 import bookingRoutes from './routes/booking.routes';
@@ -7,6 +8,7 @@ import createDashboardRoutes from './routes/dashboard.routes';
 import createServiceRoutes from './routes/services.routes';
 import createAnalyticsRoutes from './routes/analytics.routes';
 import createUserRoutes from './routes/users.routes';
+import createAuthRoutes from './routes/auth.routes';
 import { initializeGRPCClients, closeGRPCClients } from './grpc/client';
 
 dotenv.config();
@@ -29,6 +31,7 @@ pool.on('error', (err: Error) => {
 
 app.use(cors());
 app.use(express.json());
+app.use(cookieParser());
 
 // Health check
 app.get('/health', (req, res) => {
@@ -40,6 +43,7 @@ app.get('/health', (req, res) => {
 });
 
 // Routes
+app.use('/api/auth', createAuthRoutes(pool));
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/dashboard', createDashboardRoutes(pool));
 app.use('/api/services', createServiceRoutes(pool));

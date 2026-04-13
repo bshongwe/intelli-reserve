@@ -1,9 +1,9 @@
--- Migration: 004_seed_comprehensive_users.sql
+-- Migration: 005_seed_comprehensive_users.sql
 -- Created: 2026-04-13
 -- Purpose: Seed comprehensive real users with proper authentication data
 --
--- Default password for all users: SecurePass@2024
--- Bcrypt hash (12 rounds): $2b$12$D00zusq7kaamB7vElF/pp.19lInAU/cPSzXVoVu5C6ybHzD5QtEku
+-- NOTE: password_hash values are bcrypt(12) hashes. Do not store plaintext passwords here.
+--       Generate hashes at deployment time using a secrets manager or secure seed script.
 --
 -- HOSTS (Service Providers) - Diverse professionals:
 -- ─────────────────────────────────────────────────────────────────────
@@ -109,26 +109,4 @@ INSERT INTO users (id, email, password_hash, full_name, business_name, user_type
 VALUES ('d6e7f8a9-b0c1-52d3-e4f5-a6b7c8d9eafb', 'claire.dubois@fr.fr', '$2b$12$D00zusq7kaamB7vElF/pp.19lInAU/cPSzXVoVu5C6ybHzD5QtEku', 'Claire Dubois', 'Personal', 'client', true, '+33-1-5555-0208', 'Paris, France', 'University student and competitive tennis player. Seeking academic tutoring and sports coaching.', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT (email) DO NOTHING;
 
--- ═════════════════════════════════════════════════════════════════════
--- VERIFICATION & SUMMARY
--- ═════════════════════════════════════════════════════════════════════
-
--- Display summary statistics
-SELECT 
-  COUNT(*) as total_users,
-  SUM(CASE WHEN user_type = 'host' THEN 1 ELSE 0 END) as hosts,
-  SUM(CASE WHEN user_type = 'client' THEN 1 ELSE 0 END) as clients,
-  SUM(CASE WHEN is_active THEN 1 ELSE 0 END) as active_users
-FROM users;
-
--- Display all seeded users with details
-SELECT 
-  email, 
-  full_name, 
-  user_type, 
-  location,
-  is_active,
-  created_at
-FROM users 
-WHERE email LIKE '%@%.com' OR email LIKE '%@%.de' OR email LIKE '%@%.se' OR email LIKE '%@%.br' OR email LIKE '%@%.co' OR email LIKE '%@%.ae' OR email LIKE '%@%.fr'
-ORDER BY user_type DESC, created_at DESC;
+-- Run verification queries separately via a standalone verification script.

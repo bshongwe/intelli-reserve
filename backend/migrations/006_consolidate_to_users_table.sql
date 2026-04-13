@@ -29,5 +29,5 @@ ALTER TABLE services
 ADD CONSTRAINT services_host_id_fkey
 FOREIGN KEY (host_id) REFERENCES users(id) ON DELETE CASCADE;
 
--- Drop the now-unused hosts table
-DROP TABLE IF EXISTS hosts CASCADE;
+-- Drop the now-unused hosts table (no CASCADE — fail explicitly if dependents exist)
+DROP TABLE IF EXISTS hosts;

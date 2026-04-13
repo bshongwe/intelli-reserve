@@ -1,31 +1,21 @@
--- Migration: 004_seed_comprehensive_users.sql
+-- Migration: 004_seed_demo_users.sql
 -- Created: 2026-04-13
--- Purpose: Seed comprehensive real users with proper authentication data
+-- Purpose: Seed demo users for development and testing
 --
--- Default password for all users: SecurePass@2024
--- Bcrypt hash (12 rounds): $2b$12$D00zusq7kaamB7vElF/pp.19lInAU/cPSzXVoVu5C6ybHzD5QtEku
+-- NOTE: password_hash values are bcrypt(12) hashes. Do not store plaintext passwords here.
 --
--- HOSTS (Service Providers) - Diverse professionals:
+-- Demo users seeded:
 -- ─────────────────────────────────────────────────────────────────────
---   Email: sarah.martinez@business.com     | Name: Sarah Martinez
---   Email: james.wilson@consulting.com     | Name: James Wilson
---   Email: aisha.patel@wellness.com        | Name: Aisha Patel
---   Email: marcus.robinson@coaching.com    | Name: Marcus Robinson
---   Email: elena.rossi@tutoring.com        | Name: Elena Rossi
---   Email: david.kim@tech.com              | Name: David Kim
---   Email: jennifer.lee@creative.com       | Name: Jennifer Lee
---   Email: robert.chen@finance.com         | Name: Robert Chen
---
--- CLIENTS (Service Consumers) - Various backgrounds:
--- ─────────────────────────────────────────────────────────────────────
---   Email: alex.johnson@corp.com           | Name: Alex Johnson
---   Email: maya.gupta@startup.com          | Name: Maya Gupta
---   Email: thomas.mueller@eu.de            | Name: Thomas Mueller
---   Email: nina.bergstrom@se.com           | Name: Nina Bergstrom
---   Email: lucas.silva@br.com              | Name: Lucas Silva
---   Email: jessica.taylor@uk.co            | Name: Jessica Taylor
---   Email: omar.hassan@ae.com              | Name: Omar Hassan
---   Email: claire.dubois@fr.fr             | Name: Claire Dubois
+--   Email: host@demo.com          | Name: Demo Host
+--   Email: alice.host@demo.com    | Name: Alice Thompson
+--   Email: bob.host@demo.com      | Name: Bob Johnson
+--   Email: carol.host@demo.com    | Name: Carol Martinez
+--   Email: david.host@demo.com    | Name: David Chen
+--   Email: client@demo.com        | Name: Demo Client
+--   Email: john.client@demo.com   | Name: John Williams
+--   Email: jane.client@demo.com   | Name: Jane Anderson
+--   Email: michael.client@demo.com| Name: Michael Brown
+--   Email: sarah.client@demo.com  | Name: Sarah Davis
 --
 -- ═════════════════════════════════════════════════════════════════════
 

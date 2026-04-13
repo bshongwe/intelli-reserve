@@ -91,7 +91,7 @@ export function createAuthRoutes(pool: Pool): Router {
   });
 
   router.post('/logout', (_req: Request, res: Response) => {
-    res.clearCookie('auth_token', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' });
+    res.clearCookie('auth_token', { path: '/', httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' });
     res.json({ message: 'Logged out successfully' });
   });
 

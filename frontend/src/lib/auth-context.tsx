@@ -34,26 +34,24 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
 
   // Load session on mount
   React.useEffect(() => {
+    const loadSession = async () => {
+      try {
+        const response = await fetch("/api/auth/session", {
+          method: "GET",
+          credentials: "include",
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setUser(data.user);
+        }
+      } catch (error) {
+        console.error("Failed to load session:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
     loadSession();
   }, []);
-
-  const loadSession = async () => {
-    try {
-      const response = await fetch("/api/auth/session", {
-        method: "GET",
-        credentials: "include",
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setUser(data.user);
-      }
-    } catch (error) {
-      console.error("Failed to load session:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);

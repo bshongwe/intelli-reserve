@@ -33,8 +33,12 @@ export function useRequireUserType(requiredType: "host" | "client") {
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoading && user && user.userType !== requiredType) {
-      router.push("/dashboard");
+    if (!isLoading) {
+      if (!user) {
+        router.push("/auth/login");
+      } else if (user.userType !== requiredType) {
+        router.push("/dashboard");
+      }
     }
   }, [user, isLoading, requiredType, router]);
 

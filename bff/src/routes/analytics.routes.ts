@@ -32,7 +32,7 @@ export function createAnalyticsRoutes(): Router {
         revenueData: (d?.revenue_data || []).map((p: any) => ({
           month: p.label,
           revenue: p.value,
-          bookings: 0,
+          bookings: parseInt(p.date || '0', 10) || 0,
         })),
         bookingStatusData: (d?.booking_status_data || []).map((r: any) => ({
           name: r.status.charAt(0).toUpperCase() + r.status.slice(1),

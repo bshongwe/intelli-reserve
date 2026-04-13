@@ -114,7 +114,7 @@ export function createDashboardRoutes(pool: Pool): Router {
       const responseRateResult = await pool.query(
         `SELECT ROUND(
           COALESCE(
-            COUNT(CASE WHEN status IN ('CONFIRMED', 'COMPLETED') THEN 1 END)::float 
+            COUNT(CASE WHEN status IN ('confirmed', 'completed') THEN 1 END)::float 
             / NULLIF(COUNT(*), 0) * 100, 
             0
           )

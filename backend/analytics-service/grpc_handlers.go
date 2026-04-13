@@ -9,6 +9,10 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+const (
+	errHostIDRequired = "host_id is required"
+)
+
 type AnalyticsServiceServer struct {
 	pb.UnimplementedAnalyticsServiceServer
 	db *pgx.Conn
@@ -22,7 +26,7 @@ func NewAnalyticsServiceServer(db *pgx.Conn) *AnalyticsServiceServer {
 func (s *AnalyticsServiceServer) GetDashboardMetrics(ctx context.Context, req *pb.GetDashboardMetricsRequest) (*pb.GetDashboardMetricsResponse, error) {
 	hostID := req.GetHostId()
 	if hostID == "" {
-		return &pb.GetDashboardMetricsResponse{Success: false, ErrorMessage: "host_id is required"}, nil
+		return &pb.GetDashboardMetricsResponse{Success: false, ErrorMessage: errHostIDRequired}, nil
 	}
 
 	// Upcoming confirmed bookings
@@ -126,7 +130,7 @@ func (s *AnalyticsServiceServer) GetDashboardMetrics(ctx context.Context, req *p
 func (s *AnalyticsServiceServer) GetAnalytics(ctx context.Context, req *pb.GetAnalyticsRequest) (*pb.GetAnalyticsResponse, error) {
 	hostID := req.GetHostId()
 	if hostID == "" {
-		return &pb.GetAnalyticsResponse{Success: false, ErrorMessage: "host_id is required"}, nil
+		return &pb.GetAnalyticsResponse{Success: false, ErrorMessage: errHostIDRequired}, nil
 	}
 
 	months := getMonthsForRange(req.GetTimeRange())
@@ -150,11 +154,15 @@ func (s *AnalyticsServiceServer) GetAnalytics(ctx context.Context, req *pb.GetAn
 			var revenue float64
 			var bookings int32
 			if err := rows.Scan(&month, &revenue, &bookings); err == nil {
-				revenueData = append(revenueData, &pb.DataPoint{Label: month, Value: revenue})
+				// Encode bookings count in the Date field (reused as a second value carrier)
+				revenueData = append(revenueData, &pb.DataPoint{
+					Label: month,
+					Value: revenue,
+					Date:  fmt.Sprintf("%d", bookings),
+				})
 			}
 		}
 	}
-
 	// Booking status distribution (all time)
 	statusData := []*pb.StatusData{}
 	sRows, err := s.db.Query(ctx,
@@ -264,7 +272,7 @@ func (s *AnalyticsServiceServer) GetAnalytics(ctx context.Context, req *pb.GetAn
 func (s *AnalyticsServiceServer) GetRevenueReport(ctx context.Context, req *pb.GetRevenueReportRequest) (*pb.GetRevenueReportResponse, error) {
 	hostID := req.GetHostId()
 	if hostID == "" {
-		return &pb.GetRevenueReportResponse{Success: false, ErrorMessage: "host_id is required"}, nil
+		return &pb.GetRevenueReportResponse{Success: false, ErrorMessage: errHostIDRequired}, nil
 	}
 
 	startDate := req.GetStartDate()
@@ -319,7 +327,7 @@ func (s *AnalyticsServiceServer) GetRevenueReport(ctx context.Context, req *pb.G
 func (s *AnalyticsServiceServer) GetBookingStatistics(ctx context.Context, req *pb.GetBookingStatisticsRequest) (*pb.GetBookingStatisticsResponse, error) {
 	hostID := req.GetHostId()
 	if hostID == "" {
-		return &pb.GetBookingStatisticsResponse{Success: false, ErrorMessage: "host_id is required"}, nil
+		return &pb.GetBookingStatisticsResponse{Success: false, ErrorMessage: errHostIDRequired}, nil
 	}
 
 	months := getMonthsForRange(req.GetTimeRange())

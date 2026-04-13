@@ -3,4 +3,5 @@ go 1.23
 use (
 	./backend/booking-service
 	./backend/inventory-service
+	./backend/analytics-service
 )

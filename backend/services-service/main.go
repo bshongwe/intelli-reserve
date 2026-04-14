@@ -11,14 +11,14 @@ import (
 	"os/signal"
 	"syscall"
 
-	pb "github.com/intelli-reserve/backend/gen/go/inventory"
+	pb "github.com/intelli-reserve/backend/gen/go/services"
 	"github.com/jackc/pgx/v5"
 	"google.golang.org/grpc"
 )
 
 const (
-	httpPort = ":8082"
-	grpcPort = ":8092"
+	httpPort = ":8083"
+	grpcPort = ":8093"
 )
 
 func main() {
@@ -49,7 +49,7 @@ func main() {
 		log.Fatalf("Unable to connect to database: %v", err)
 	}
 	defer conn.Close(context.Background())
-	log.Printf("✅ Inventory Service connected to PostgreSQL DB")
+	log.Printf("✅ Services Service connected to PostgreSQL")
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
@@ -66,12 +66,12 @@ func startHTTPServer() {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{
 			"status":  "healthy",
-			"service": "inventory-service",
+			"service": "services-service",
 			"grpc":    "available on " + grpcPort,
 		})
 	})
 
-	log.Printf("🚀 Inventory Service REST API server running on %s", httpPort)
+	log.Printf("🚀 Services Service REST API running on %s", httpPort)
 	if err := http.ListenAndServe(httpPort, nil); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("HTTP Server error: %v", err)
 	}
@@ -84,9 +84,9 @@ func startGRPCServer(db *pgx.Conn) {
 	}
 
 	s := grpc.NewServer()
-	pb.RegisterInventoryServiceServer(s, NewInventoryServiceServer(db))
+	pb.RegisterServicesManagementServer(s, NewServicesManagementServer(db))
 
-	log.Printf("🚀 Inventory Service gRPC server running on %s", grpcPort)
+	log.Printf("🚀 Services Service gRPC running on %s", grpcPort)
 	if err := s.Serve(listener); err != nil {
 		log.Fatalf("gRPC Server error: %v", err)
 	}

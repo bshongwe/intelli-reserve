@@ -10,16 +10,19 @@ import path from 'path';
 const PROTO_PATH = path.join(__dirname, '../../..', 'backend/proto');
 const BACKEND_URL = process.env.BACKEND_GRPC_URL || 'localhost:8090';
 const ANALYTICS_URL = process.env.ANALYTICS_GRPC_URL || 'localhost:8091';
+const INVENTORY_URL = process.env.INVENTORY_GRPC_URL || 'localhost:8092';
 
 // Package definitions
 let bookingPackageDef: any;
 let analyticsPackageDef: any;
 let servicesPackageDef: any;
+let inventoryPackageDef: any;
 
 // gRPC clients
 let bookingClient: any;
 let analyticsClient: any;
 let servicesClient: any;
+let inventoryClient: any;
 
 /**
  * Initialize all gRPC clients
@@ -54,19 +57,31 @@ export async function initializeGRPCClients(): Promise<void> {
       includeDirs: [PROTO_PATH],
     });
 
+    inventoryPackageDef = protoLoader.loadSync(path.join(PROTO_PATH, 'inventory.proto'), {
+      keepCase: true,
+      longs: String,
+      enums: String,
+      defaults: true,
+      oneofs: true,
+      includeDirs: [PROTO_PATH],
+    });
+
     // Get gRPC service descriptors
     const bookingGrpcObj = grpc.loadPackageDefinition(bookingPackageDef) as any;
     const analyticsGrpcObj = grpc.loadPackageDefinition(analyticsPackageDef) as any;
     const servicesGrpcObj = grpc.loadPackageDefinition(servicesPackageDef) as any;
+    const inventoryGrpcObj = grpc.loadPackageDefinition(inventoryPackageDef) as any;
 
     // Create clients
     const BookingService = bookingGrpcObj.intelli_reserve.booking.BookingService;
     const AnalyticsService = analyticsGrpcObj.intelli_reserve.analytics.AnalyticsService;
     const ServicesManagement = servicesGrpcObj.intelli_reserve.services.ServicesManagement;
+    const InventoryService = inventoryGrpcObj.intelli_reserve.inventory.InventoryService;
 
     bookingClient = new BookingService(BACKEND_URL, grpc.credentials.createInsecure());
     analyticsClient = new AnalyticsService(ANALYTICS_URL, grpc.credentials.createInsecure());
     servicesClient = new ServicesManagement(BACKEND_URL, grpc.credentials.createInsecure());
+    inventoryClient = new InventoryService(INVENTORY_URL, grpc.credentials.createInsecure());
 
     console.log('✅ gRPC clients initialized successfully');
   } catch (error) {
@@ -224,11 +239,49 @@ export const servicesManagement = {
 };
 
 /**
+ * INVENTORY SERVICE METHODS
+ */
+
+export const inventoryService = {
+  createTimeSlot: async (request: any) => {
+    const method = promisifyGRPCMethod(inventoryClient, 'CreateTimeSlot');
+    return method(request);
+  },
+
+  getTimeSlots: async (request: any) => {
+    const method = promisifyGRPCMethod(inventoryClient, 'GetTimeSlots');
+    return method(request);
+  },
+
+  updateOccupancy: async (request: any) => {
+    const method = promisifyGRPCMethod(inventoryClient, 'UpdateOccupancy');
+    return method(request);
+  },
+
+  getAvailability: async (request: any) => {
+    const method = promisifyGRPCMethod(inventoryClient, 'GetAvailability');
+    return method(request);
+  },
+
+  blockTimeSlot: async (request: any) => {
+    const method = promisifyGRPCMethod(inventoryClient, 'BlockTimeSlot');
+    return method(request);
+  },
+
+  getCapacityStatus: async (request: any) => {
+    const method = promisifyGRPCMethod(inventoryClient, 'GetCapacityStatus');
+    return method(request);
+  },
+};
+
+/**
  * Cleanup function to close all gRPC client connections
  */
 export function closeGRPCClients(): void {
   if (bookingClient) bookingClient.close();
   if (analyticsClient) analyticsClient.close();
   if (servicesClient) servicesClient.close();
+  if (inventoryClient) inventoryClient.close();
   console.log('✅ gRPC clients closed');
 }
+

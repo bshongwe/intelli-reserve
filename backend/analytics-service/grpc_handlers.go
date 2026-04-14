@@ -2,15 +2,11 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"log"
-	"time"
 
 	pb "github.com/intelli-reserve/backend/gen/go/analytics"
 	"github.com/jackc/pgx/v5"
-	"google.golang.org/protobuf/types/known/structpb"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type AnalyticsServiceServer struct {
@@ -22,75 +18,65 @@ func NewAnalyticsServiceServer(db *pgx.Conn) *AnalyticsServiceServer {
 	return &AnalyticsServiceServer{db: db}
 }
 
-// GetDashboardMetrics returns key metrics for a host's dashboard
+// GetDashboardMetrics returns KPI metrics for the host dashboard
 func (s *AnalyticsServiceServer) GetDashboardMetrics(ctx context.Context, req *pb.GetDashboardMetricsRequest) (*pb.GetDashboardMetricsResponse, error) {
 	hostID := req.GetHostId()
 
-	// Get upcoming bookings count
 	var upcomingBookings int32
 	err := s.db.QueryRow(ctx,
-		`SELECT COUNT(*) FROM bookings 
-		 WHERE host_id = $1 AND status = 'confirmed' 
-		 AND created_at > NOW()`,
+		`SELECT COUNT(*)::integer FROM bookings
+		 WHERE host_id = $1 AND status IN ('pending', 'confirmed')`,
 		hostID).Scan(&upcomingBookings)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil {
 		log.Printf("Error fetching upcoming bookings: %v", err)
-		return &pb.GetDashboardMetricsResponse{
-			Success:      false,
-			ErrorMessage: "Failed to fetch upcoming bookings",
-		}, nil
 	}
 
-	// Get total revenue (confirmed + completed bookings)
 	var totalRevenue float64
 	err = s.db.QueryRow(ctx,
 		`SELECT COALESCE(SUM(s.base_price), 0)::float
 		 FROM bookings b
 		 JOIN services s ON b.service_id = s.id
-		 WHERE b.host_id = $1 AND b.status IN ('confirmed', 'completed')`,
+		 WHERE b.host_id = $1 AND b.status = 'completed'`,
 		hostID).Scan(&totalRevenue)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil {
 		log.Printf("Error fetching total revenue: %v", err)
-		return &pb.GetDashboardMetricsResponse{
-			Success:      false,
-			ErrorMessage: "Failed to fetch revenue data",
-		}, nil
 	}
 
-	// Get average occupancy (bookings per available slot)
 	var avgOccupancy float64
 	err = s.db.QueryRow(ctx,
-		`SELECT COALESCE(AVG(occupancy), 0)::float FROM (
-		   SELECT COUNT(b.id)::float / NULLIF(COUNT(DISTINCT ts.id), 0) * 100 as occupancy
+		`SELECT COALESCE(AVG(subq.occupancy_rate), 0)::float FROM (
+		   SELECT CASE WHEN ts.capacity > 0
+		     THEN (COUNT(b.id)::float / ts.capacity * 100)
+		     ELSE 0 END AS occupancy_rate
 		   FROM time_slots ts
-		   LEFT JOIN bookings b ON ts.id = b.time_slot_id AND b.host_id = $1
+		   LEFT JOIN bookings b ON b.time_slot_id = ts.id
+		     AND b.status IN ('confirmed', 'completed')
+		     AND b.host_id = $1
 		   WHERE ts.service_id IN (SELECT id FROM services WHERE host_id = $1)
-		   GROUP BY ts.slot_date
+		   GROUP BY ts.id, ts.capacity
 		 ) subq`,
 		hostID).Scan(&avgOccupancy)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil {
 		avgOccupancy = 0
 		log.Printf("Error fetching occupancy: %v", err)
 	}
 
-	// Get response rate (confirmed bookings / total inquiries)
 	var responseRate float64
 	err = s.db.QueryRow(ctx,
 		`SELECT COALESCE(
-		   COUNT(CASE WHEN status IN ('confirmed', 'completed') THEN 1 END)::float / 
+		   COUNT(CASE WHEN status IN ('confirmed', 'completed') THEN 1 END)::float /
 		   NULLIF(COUNT(*), 0) * 100, 0)::float
 		 FROM bookings
 		 WHERE host_id = $1`,
 		hostID).Scan(&responseRate)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil {
 		responseRate = 0
 		log.Printf("Error fetching response rate: %v", err)
 	}
 
-	// Get revenue trend data (last 12 months)
 	revenueData := []*pb.DataPoint{}
 	rows, err := s.db.Query(ctx,
-		`SELECT 
+		`SELECT
 		   TO_CHAR(DATE_TRUNC('month', b.created_at), 'Mon YYYY') AS month,
 		   COALESCE(SUM(s.base_price), 0)::float AS revenue
 		 FROM bookings b
@@ -108,47 +94,33 @@ func (s *AnalyticsServiceServer) GetDashboardMetrics(ctx context.Context, req *p
 			var month string
 			var revenue float64
 			if err := rows.Scan(&month, &revenue); err == nil {
-				revenueData = append(revenueData, &pb.DataPoint{
-					Label: month,
-					Value: revenue,
-				})
+				revenueData = append(revenueData, &pb.DataPoint{Label: month, Value: revenue})
 			}
 		}
 	}
 
-	// Build response
-	metrics := &pb.DashboardMetrics{
-		UpcomingBookings: upcomingBookings,
-		TotalRevenue:     formatCurrency(totalRevenue),
-		AvgOccupancy:     avgOccupancy,
-		ResponseRate:     responseRate,
-		RevenueData:      revenueData,
-	}
-
 	return &pb.GetDashboardMetricsResponse{
 		Success: true,
-		Metrics: metrics,
+		Metrics: &pb.DashboardMetrics{
+			UpcomingBookings: upcomingBookings,
+			TotalRevenue:     formatCurrency(totalRevenue),
+			AvgOccupancy:     avgOccupancy,
+			ResponseRate:     responseRate,
+			RevenueData:      revenueData,
+		},
 	}, nil
 }
 
 // GetAnalytics returns comprehensive analytics data
 func (s *AnalyticsServiceServer) GetAnalytics(ctx context.Context, req *pb.GetAnalyticsRequest) (*pb.GetAnalyticsResponse, error) {
 	hostID := req.GetHostId()
-	timeRange := req.GetTimeRange()
+	months := getMonthsForRange(req.GetTimeRange())
 
-	if timeRange == "" {
-		timeRange = "6m"
-	}
-
-	months := getMonthsForRange(timeRange)
-
-	// Revenue trend
 	revenueData := []*pb.DataPoint{}
 	rows, err := s.db.Query(ctx,
-		`SELECT 
+		`SELECT
 		   TO_CHAR(DATE_TRUNC('month', b.created_at), 'Mon YYYY') AS month,
-		   COALESCE(SUM(s.base_price), 0)::float AS revenue,
-		   COUNT(b.id)::integer AS bookings
+		   COALESCE(SUM(s.base_price), 0)::float AS revenue
 		 FROM bookings b
 		 JOIN services s ON b.service_id = s.id
 		 WHERE b.host_id = $1 AND b.status IN ('confirmed', 'completed')
@@ -161,18 +133,13 @@ func (s *AnalyticsServiceServer) GetAnalytics(ctx context.Context, req *pb.GetAn
 		for rows.Next() {
 			var month string
 			var revenue float64
-			var bookings int64
-			if err := rows.Scan(&month, &revenue, &bookings); err == nil {
-				revenueData = append(revenueData, &pb.DataPoint{
-					Label: month,
-					Value: revenue,
-				})
+			if err := rows.Scan(&month, &revenue); err == nil {
+				revenueData = append(revenueData, &pb.DataPoint{Label: month, Value: revenue})
 			}
 		}
 	}
 
-	// Booking status distribution
-	statusData := []*pb.DataPoint{}
+	statusData := []*pb.StatusData{}
 	rows, err = s.db.Query(ctx,
 		`SELECT status, COUNT(*)::integer as count
 		 FROM bookings WHERE host_id = $1
@@ -181,18 +148,14 @@ func (s *AnalyticsServiceServer) GetAnalytics(ctx context.Context, req *pb.GetAn
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {
-			var status string
-			var count int64
-			if err := rows.Scan(&status, &count); err == nil {
-				statusData = append(statusData, &pb.DataPoint{
-					Label: status,
-					Value: float64(count),
-				})
+			var st string
+			var count int32
+			if err := rows.Scan(&st, &count); err == nil {
+				statusData = append(statusData, &pb.StatusData{Status: st, Count: count})
 			}
 		}
 	}
 
-	// Top services
 	topServices := []*pb.ServiceData{}
 	rows, err = s.db.Query(ctx,
 		`SELECT s.id, s.name, COUNT(b.id)::integer as bookings, COALESCE(SUM(s.base_price), 0)::float as revenue
@@ -206,68 +169,91 @@ func (s *AnalyticsServiceServer) GetAnalytics(ctx context.Context, req *pb.GetAn
 		defer rows.Close()
 		for rows.Next() {
 			var id, name string
-			var bookings int64
+			var bookings int32
 			var revenue float64
 			if err := rows.Scan(&id, &name, &bookings, &revenue); err == nil {
 				topServices = append(topServices, &pb.ServiceData{
-					ServiceId:   id,
-					ServiceName: name,
-					Bookings:    int32(bookings),
-					Revenue:     revenue,
+					ServiceId: id, ServiceName: name, Bookings: bookings, Revenue: revenue,
 				})
 			}
 		}
 	}
 
-	// Total revenue in range
-	var totalRevenue float64
-	s.db.QueryRow(ctx,
-		`SELECT COALESCE(SUM(s.base_price), 0)::float
+	topCustomers := []*pb.CustomerData{}
+	rows, err = s.db.Query(ctx,
+		`SELECT client_name, client_email, COUNT(*)::integer as bookings, COALESCE(SUM(s.base_price), 0)::float as spent
 		 FROM bookings b
 		 JOIN services s ON b.service_id = s.id
 		 WHERE b.host_id = $1 AND b.status IN ('confirmed', 'completed')
+		 AND b.created_at >= NOW() - ($2 || ' months')::interval
+		 GROUP BY client_name, client_email
+		 ORDER BY bookings DESC LIMIT 5`,
+		hostID, months)
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var name, email string
+			var bookings int32
+			var spent float64
+			if err := rows.Scan(&name, &email, &bookings, &spent); err == nil {
+				topCustomers = append(topCustomers, &pb.CustomerData{
+					CustomerName: name, CustomerEmail: email, TotalBookings: bookings, TotalSpent: spent,
+				})
+			}
+		}
+	}
+
+	var totalRevenue float64
+	var activeCustomers, totalBookings int32
+	s.db.QueryRow(ctx,
+		`SELECT COALESCE(SUM(s.base_price), 0)::float
+		 FROM bookings b JOIN services s ON b.service_id = s.id
+		 WHERE b.host_id = $1 AND b.status IN ('confirmed', 'completed')
 		 AND b.created_at >= NOW() - ($2 || ' months')::interval`,
 		hostID, months).Scan(&totalRevenue)
-
-	// Active customers
-	var activeCustomers int32
 	s.db.QueryRow(ctx,
-		`SELECT COUNT(DISTINCT client_email)::integer
-		 FROM bookings
+		`SELECT COUNT(DISTINCT client_email)::integer FROM bookings
 		 WHERE host_id = $1 AND status IN ('confirmed', 'completed')
 		 AND created_at >= NOW() - ($2 || ' months')::interval`,
 		hostID, months).Scan(&activeCustomers)
-
-	// Total bookings
-	var totalBookings int32
 	s.db.QueryRow(ctx,
 		`SELECT COUNT(*)::integer FROM bookings
 		 WHERE host_id = $1 AND status IN ('confirmed', 'completed')
 		 AND created_at >= NOW() - ($2 || ' months')::interval`,
 		hostID, months).Scan(&totalBookings)
 
-	analyticsData := &pb.AnalyticsData{
-		RevenueData:      revenueData,
-		StatusData:       statusData,
-		TopServices:     topServices,
-	}
-
 	return &pb.GetAnalyticsResponse{
-		Success:  true,
-		Data:     analyticsData,
+		Success: true,
+		Data: &pb.AnalyticsData{
+			RevenueData:       revenueData,
+			BookingStatusData: statusData,
+			TopServices:       topServices,
+			TopCustomers:      topCustomers,
+			Metrics: &pb.Metrics{
+				TotalRevenue:    formatCurrency(totalRevenue),
+				TotalBookings:   totalBookings,
+				ActiveCustomers: activeCustomers,
+			},
+		},
 	}, nil
 }
 
 // GetRevenueReport returns detailed revenue report
 func (s *AnalyticsServiceServer) GetRevenueReport(ctx context.Context, req *pb.GetRevenueReportRequest) (*pb.GetRevenueReportResponse, error) {
 	hostID := req.GetHostId()
-	
-	// Default time range to 6 months if not specified
 	months := 6
+
+	var totalRevenue float64
+	s.db.QueryRow(ctx,
+		`SELECT COALESCE(SUM(s.base_price), 0)::float
+		 FROM bookings b JOIN services s ON b.service_id = s.id
+		 WHERE b.host_id = $1 AND b.status IN ('confirmed', 'completed')
+		 AND b.created_at >= NOW() - ($2 || ' months')::interval`,
+		hostID, months).Scan(&totalRevenue)
 
 	revenueData := []*pb.DataPoint{}
 	rows, err := s.db.Query(ctx,
-		`SELECT 
+		`SELECT
 		   TO_CHAR(DATE_TRUNC('month', b.created_at), 'Mon YYYY') AS month,
 		   COALESCE(SUM(s.base_price), 0)::float AS revenue
 		 FROM bookings b
@@ -277,7 +263,6 @@ func (s *AnalyticsServiceServer) GetRevenueReport(ctx context.Context, req *pb.G
 		 GROUP BY DATE_TRUNC('month', b.created_at)
 		 ORDER BY DATE_TRUNC('month', b.created_at) ASC`,
 		hostID, months)
-
 	if err != nil {
 		log.Printf("Error fetching revenue report: %v", err)
 		return &pb.GetRevenueReportResponse{
@@ -285,26 +270,22 @@ func (s *AnalyticsServiceServer) GetRevenueReport(ctx context.Context, req *pb.G
 			ErrorMessage: "Failed to fetch revenue data",
 		}, nil
 	}
-
 	defer rows.Close()
 	for rows.Next() {
 		var month string
 		var revenue float64
 		if err := rows.Scan(&month, &revenue); err == nil {
-			revenueData = append(revenueData, &pb.DataPoint{
-				Label: month,
-				Value: revenue,
-			})
+			revenueData = append(revenueData, &pb.DataPoint{Label: month, Value: revenue})
 		}
 	}
 
 	return &pb.GetRevenueReportResponse{
 		Success: true,
 		Report: &pb.RevenueReport{
-			TotalRevenue:               totalRevenue,
-			CompletedBookingsRevenue:   totalRevenue,
-			PendingBookingsRevenue:     0,
-			DailyRevenue:               revenueData,
+			TotalRevenue:             totalRevenue,
+			CompletedBookingsRevenue: totalRevenue,
+			PendingBookingsRevenue:   0,
+			DailyRevenue:             revenueData,
 		},
 	}, nil
 }
@@ -312,45 +293,42 @@ func (s *AnalyticsServiceServer) GetRevenueReport(ctx context.Context, req *pb.G
 // GetBookingStatistics returns booking statistics
 func (s *AnalyticsServiceServer) GetBookingStatistics(ctx context.Context, req *pb.GetBookingStatisticsRequest) (*pb.GetBookingStatisticsResponse, error) {
 	hostID := req.GetHostId()
-	
-	// Default time range to 6 months
-	months := 6
+	months := getMonthsForRange(req.GetTimeRange())
 
-	var totalBookings, confirmedBookings, completedBookings, cancelledBookings int32
-
+	var totalBookings, confirmedBookings, completedBookings, cancelledBookings, pendingBookings int32
 	s.db.QueryRow(ctx, `SELECT COUNT(*)::integer FROM bookings WHERE host_id = $1 AND created_at >= NOW() - ($2 || ' months')::interval`, hostID, months).Scan(&totalBookings)
 	s.db.QueryRow(ctx, `SELECT COUNT(*)::integer FROM bookings WHERE host_id = $1 AND status = 'confirmed' AND created_at >= NOW() - ($2 || ' months')::interval`, hostID, months).Scan(&confirmedBookings)
 	s.db.QueryRow(ctx, `SELECT COUNT(*)::integer FROM bookings WHERE host_id = $1 AND status = 'completed' AND created_at >= NOW() - ($2 || ' months')::interval`, hostID, months).Scan(&completedBookings)
 	s.db.QueryRow(ctx, `SELECT COUNT(*)::integer FROM bookings WHERE host_id = $1 AND status = 'cancelled' AND created_at >= NOW() - ($2 || ' months')::interval`, hostID, months).Scan(&cancelledBookings)
+	s.db.QueryRow(ctx, `SELECT COUNT(*)::integer FROM bookings WHERE host_id = $1 AND status = 'pending' AND created_at >= NOW() - ($2 || ' months')::interval`, hostID, months).Scan(&pendingBookings)
+
+	var completionRate, avgValue float64
+	if totalBookings > 0 {
+		completionRate = float64(completedBookings) / float64(totalBookings) * 100
+	}
+	s.db.QueryRow(ctx,
+		`SELECT COALESCE(AVG(s.base_price), 0)::float
+		 FROM bookings b JOIN services s ON b.service_id = s.id
+		 WHERE b.host_id = $1 AND b.status IN ('confirmed', 'completed')
+		 AND b.created_at >= NOW() - ($2 || ' months')::interval`,
+		hostID, months).Scan(&avgValue)
 
 	return &pb.GetBookingStatisticsResponse{
 		Success: true,
 		Statistics: &pb.BookingStatistics{
-			TotalBookings:        totalBookings,
-			ConfirmedBookings:    confirmedBookings,
-			PendingBookings:      0,
-			CancelledBookings:    cancelledBookings,
-			CompletedBookings:    completedBookings,
-			BookingCompletionRate: 0,
-			AvgBookingValue:      0,
+			TotalBookings:         totalBookings,
+			ConfirmedBookings:     confirmedBookings,
+			PendingBookings:       pendingBookings,
+			CancelledBookings:     cancelledBookings,
+			CompletedBookings:     completedBookings,
+			BookingCompletionRate: completionRate,
+			AvgBookingValue:       avgValue,
 		},
 	}, nil
-	}, nil
 }
-
-// Helper functions
 
 func formatCurrency(amount float64) string {
-	return "R" + formatFloat(amount)
-}
-
-func formatFloat(f float64) string {
-	return formatFloat64(f, 2)
-}
-
-func formatFloat64(f float64, precision int) string {
-	format := "%." + string(rune(48+precision)) + "f"
-	return fmt.Sprintf(format, f)
+	return fmt.Sprintf("R%.2f", amount)
 }
 
 func getMonthsForRange(timeRange string) int {

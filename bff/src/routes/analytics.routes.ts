@@ -58,9 +58,10 @@ export function createAnalyticsRoutes(): Router {
           avgRating: d?.metrics?.avg_rating ?? 0,
         },
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Analytics error:', error);
-      res.status(500).json({ error: 'Failed to fetch analytics' });
+      const message = error?.details || error?.message || 'Failed to fetch analytics';
+      res.status(500).json({ error: message });
     }
   });
 

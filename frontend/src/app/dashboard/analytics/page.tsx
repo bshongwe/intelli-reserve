@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MetricCard } from "@/components/analytics/MetricCard";
-import { StatBadge } from "@/components/analytics/StatBadge";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { analyticsAPI } from "@/lib/api";
@@ -39,7 +38,7 @@ export default function AnalyticsDashboardPage() {
     activeCustomers: 0,
     avgRating: 0,
   };
-  const totalBookings = topServices.reduce((s: number, sv: any) => s + sv.bookings, 0);
+  const totalBookings = metrics.totalBookings;
   const totalRevenue = topCustomers.reduce((s: number, c: any) => s + c.totalSpent, 0);
 
   if (isLoading) {
@@ -78,28 +77,24 @@ export default function AnalyticsDashboardPage() {
           label="Total Revenue"
           value={metrics.totalRevenue}
           icon={TrendingUp}
-          trend={{ value: 12, isPositive: true }}
           variant="success"
         />
         <MetricCard
           label="Total Bookings"
           value={metrics.totalBookings.toString()}
           icon={Calendar}
-          trend={{ value: 8, isPositive: true }}
           variant="default"
         />
         <MetricCard
           label="Active Customers"
           value={metrics.activeCustomers.toString()}
           icon={Users}
-          trend={{ value: 5, isPositive: true }}
           variant="default"
         />
         <MetricCard
           label="Avg Rating"
-          value={metrics.avgRating.toFixed(1)}
+          value={metrics.avgRating > 0 ? metrics.avgRating.toFixed(1) : "N/A"}
           icon={Star}
-          trend={{ value: 2, isPositive: true }}
           variant="success"
         />
       </div>
@@ -261,12 +256,9 @@ export default function AnalyticsDashboardPage() {
                   </div>
                   <div className="text-right">
                     <p className="text-xs sm:text-sm font-semibold">R{customer.totalSpent.toLocaleString()}</p>
-                    <StatBadge
-                      label="Value"
-                      value={totalRevenue > 0 ? `${Math.round((customer.totalSpent / totalRevenue) * 100)}%` : '0%'}
-                      variant="outline"
-                      className="text-xs mt-1"
-                    />
+                    <Badge variant="outline" className="text-xs mt-1">
+                      {totalRevenue > 0 ? `${Math.round((customer.totalSpent / totalRevenue) * 100)}%` : '0%'} of revenue
+                    </Badge>
                   </div>
                 </div>
               ))}
@@ -275,49 +267,14 @@ export default function AnalyticsDashboardPage() {
         </Card>
       </div>
 
-      {/* System Health */}
-      <Card className="w-full overflow-hidden">
-        <CardHeader className="pb-3 sm:pb-4">
-          <CardTitle className="text-base sm:text-lg md:text-xl">System Health</CardTitle>
-          <CardDescription className="text-xs sm:text-sm">Platform performance metrics</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <div className="p-3 sm:p-4 rounded-lg border">
-              <div className="flex items-center justify-between mb-2 gap-2">
-                <p className="text-xs sm:text-sm font-medium">Platform Uptime</p>
-                <Badge className="bg-red-100 text-red-800 text-xs">Good</Badge>
-              </div>
-              <p className="text-xl sm:text-2xl font-bold">99.9%</p>
-              <p className="text-xs text-muted-foreground mt-1">Last 30 days</p>
-            </div>
-            <div className="p-3 sm:p-4 rounded-lg border">
-              <div className="flex items-center justify-between mb-2 gap-2">
-                <p className="text-xs sm:text-sm font-medium">Avg Response Time</p>
-                <Badge className="bg-red-100 text-red-800 text-xs">Good</Badge>
-              </div>
-              <p className="text-xl sm:text-2xl font-bold">245ms</p>
-              <p className="text-xs text-muted-foreground mt-1">API calls</p>
-            </div>
-            <div className="p-3 sm:p-4 rounded-lg border">
-              <div className="flex items-center justify-between mb-2 gap-2">
-                <p className="text-xs sm:text-sm font-medium">Error Rate</p>
-                <Badge className="bg-orange-100 text-orange-800 text-xs">Watch</Badge>
-              </div>
-              <p className="text-xl sm:text-2xl font-bold">0.12%</p>
-              <p className="text-xs text-muted-foreground mt-1">Last 24 hours</p>
-            </div>
-            <div className="p-3 sm:p-4 rounded-lg border">
-              <div className="flex items-center justify-between mb-2 gap-2">
-                <p className="text-xs sm:text-sm font-medium">Data Storage</p>
-                <Badge className="bg-red-100 text-red-800 text-xs">Good</Badge>
-              </div>
-              <p className="text-xl sm:text-2xl font-bold">45%</p>
-              <p className="text-xs text-muted-foreground mt-1">Of quota used</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Empty state when no data */}
+      {!isLoading && revenueData.length === 0 && bookingStatusData.length === 0 && (
+        <Card>
+          <CardContent className="py-12 text-center text-sm text-muted-foreground">
+            No analytics data yet. Data will appear once bookings are confirmed or completed.
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

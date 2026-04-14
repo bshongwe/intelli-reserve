@@ -41,7 +41,7 @@ func main() {
 	defer conn.Close(context.Background())
 
 	dbConn = conn
-	log.Printf("✅ Connected to PostgreSQL database")
+	log.Printf("✅ Booking Service connected to PostgreSQL DB")
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
@@ -63,7 +63,7 @@ func startHTTPServer() {
 	http.HandleFunc("/v1/bookings", createBookingHandler)
 
 	port := ":8080"
-	log.Printf("🚀 REST API server running on %s", port)
+	log.Printf("🚀 Booking Service REST API server running on %s", port)
 
 	if err := http.ListenAndServe(port, nil); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("HTTP Server error: %v", err)
@@ -81,7 +81,7 @@ func startGRPCServer() {
 	bookingServer := NewBookingServiceServer(dbConn)
 	pb.RegisterBookingServiceServer(s, bookingServer)
 
-	log.Printf("🚀 gRPC server running on :8090")
+	log.Printf("🚀 Booking Service gRPC server running on :8090")
 
 	if err := s.Serve(listener); err != nil {
 		log.Fatalf("gRPC Server error: %v", err)

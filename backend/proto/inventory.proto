@@ -1,0 +1,118 @@
+syntax = "proto3";
+
+package intelli_reserve.inventory;
+
+option go_package = "github.com/intelli-reserve/backend/gen/go/inventory";
+option java_multiple_files = true;
+option java_package = "com.intelli_reserve.inventory";
+
+service InventoryService {
+  rpc CreateTimeSlot(CreateTimeSlotRequest) returns (CreateTimeSlotResponse);
+  rpc GetTimeSlots(GetTimeSlotsRequest) returns (GetTimeSlotsResponse);
+  rpc UpdateOccupancy(UpdateOccupancyRequest) returns (UpdateOccupancyResponse);
+  rpc GetAvailability(GetAvailabilityRequest) returns (GetAvailabilityResponse);
+  rpc BlockTimeSlot(BlockTimeSlotRequest) returns (BlockTimeSlotResponse);
+  rpc GetCapacityStatus(GetCapacityStatusRequest) returns (GetCapacityStatusResponse);
+}
+
+message CreateTimeSlotRequest {
+  string service_id = 1;
+  string date = 2;
+  string start_time = 3;
+  string end_time = 4;
+  int32 capacity = 5;
+  bool is_available = 6;
+}
+
+message CreateTimeSlotResponse {
+  bool success = 1;
+  TimeSlotDetail time_slot = 2;
+  string error_message = 3;
+}
+
+message GetTimeSlotsRequest {
+  string service_id = 1;
+  string date = 2;
+  string status = 3;
+}
+
+message GetTimeSlotsResponse {
+  bool success = 1;
+  repeated TimeSlotDetail slots = 2;
+  string error_message = 3;
+}
+
+message TimeSlotDetail {
+  string id = 1;
+  string service_id = 2;
+  string date = 3;
+  string start_time = 4;
+  string end_time = 5;
+  int32 capacity = 6;
+  int32 booked_count = 7;
+  int32 available_spots = 8;
+  bool is_available = 9;
+  string status = 10;
+  string created_at = 11;
+  string updated_at = 12;
+}
+
+message UpdateOccupancyRequest {
+  string time_slot_id = 1;
+  int32 booked_count = 2;
+}
+
+message UpdateOccupancyResponse {
+  bool success = 1;
+  TimeSlotDetail time_slot = 2;
+  string error_message = 3;
+}
+
+message GetAvailabilityRequest {
+  string service_id = 1;
+  string date_from = 2;
+  string date_to = 3;
+}
+
+message GetAvailabilityResponse {
+  bool success = 1;
+  repeated DateAvailability dates = 2;
+  string error_message = 3;
+}
+
+message DateAvailability {
+  string date = 1;
+  int32 total_slots = 2;
+  int32 available_slots = 3;
+  int32 booked_slots = 4;
+  int32 blocked_slots = 5;
+  int32 occupancy_percentage = 6;
+}
+
+message BlockTimeSlotRequest {
+  string time_slot_id = 1;
+  string reason = 2;
+}
+
+message BlockTimeSlotResponse {
+  bool success = 1;
+  TimeSlotDetail time_slot = 2;
+  string error_message = 3;
+}
+
+message GetCapacityStatusRequest {
+  string service_id = 1;
+  string date = 2;
+}
+
+message GetCapacityStatusResponse {
+  bool success = 1;
+  string service_id = 2;
+  string date = 3;
+  int32 total_capacity = 4;
+  int32 booked = 5;
+  int32 available = 6;
+  int32 occupancy_percentage = 7;
+  int32 total_slots = 8;
+  string error_message = 9;
+}

@@ -27,7 +27,7 @@ func main() {
 		log.Fatalf("Unable to connect to database: %v", err)
 	}
 	defer conn.Close(context.Background())
-	log.Printf("✅ Connected to PostgreSQL database")
+	log.Printf("✅ Analytics Service connected to PostgreSQL DB")
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
@@ -49,7 +49,7 @@ func startHTTPServer() {
 		})
 	})
 
-	log.Printf("🚀 REST API server running on %s", httpPort)
+	log.Printf("🚀 Analytics Service REST API server running on %s", httpPort)
 	if err := http.ListenAndServe(httpPort, nil); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("HTTP Server error: %v", err)
 	}
@@ -64,7 +64,7 @@ func startGRPCServer(db *pgx.Conn) {
 	s := grpc.NewServer()
 	pb.RegisterAnalyticsServiceServer(s, NewAnalyticsServiceServer(db))
 
-	log.Printf("🚀 gRPC server running on %s", grpcPort)
+	log.Printf("🚀 Analytics Service gRPC server running on %s", grpcPort)
 	if err := s.Serve(listener); err != nil {
 		log.Fatalf("gRPC Server error: %v", err)
 	}

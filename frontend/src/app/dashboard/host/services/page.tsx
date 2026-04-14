@@ -60,6 +60,7 @@ export default function HostServicesPage() {
   const { data: services = [] } = useQuery({
     queryKey: ["host-services", hostId],
     queryFn: () => servicesAPI.getHostServices(hostId),
+    enabled: !!hostId,
   });
 
   // Filter and search hook

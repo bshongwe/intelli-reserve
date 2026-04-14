@@ -1,7 +1,7 @@
 go 1.23
 
 use (
+	./backend/analytics-service
 	./backend/booking-service
 	./backend/inventory-service
-	./backend/analytics-service
 )

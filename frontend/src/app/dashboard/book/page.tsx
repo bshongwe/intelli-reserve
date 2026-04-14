@@ -9,6 +9,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
+import Link from "next/link";
 import { bookingsAPI, servicesAPI, timeSlotsAPI, type Service, type TimeSlot } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { format } from "date-fns";
@@ -20,6 +21,7 @@ export default function BookPage() {
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
+  const [confirmedBooking, setConfirmedBooking] = useState<{ id: string; service: Service; date: Date; slot: TimeSlot } | null>(null);
 
   // Fetch all active services
   const { data: services = [], isLoading: servicesLoading } = useQuery({
@@ -48,7 +50,7 @@ export default function BookPage() {
         numberOfParticipants: 1,
       }),
     onSuccess: (data) => {
-      toast({ title: "Booking Initiated!", description: `Booking ID: ${data.id}` });
+      setConfirmedBooking({ id: data.id, service: selectedService!, date: selectedDate!, slot: selectedSlot! });
       setSelectedService(null);
       setSelectedDate(new Date());
       setSelectedSlot(null);
@@ -59,6 +61,49 @@ export default function BookPage() {
   });
 
   const isFormValid = !!selectedService && !!selectedDate && !!selectedSlot;
+
+  if (confirmedBooking) {
+    return (
+      <div className="max-w-lg mx-auto space-y-6 py-12 px-4 text-center">
+        <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center mx-auto">
+          <CheckCircle2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400" strokeWidth={2} />
+        </div>
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold tracking-tight">Booking Submitted!</h1>
+          <p className="text-sm text-muted-foreground">Your booking is awaiting confirmation from the host.</p>
+        </div>
+        <div className="rounded-xl border bg-muted/40 divide-y divide-border text-left overflow-hidden">
+          <div className="px-4 py-3">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1">Service</p>
+            <p className="text-sm font-semibold">{confirmedBooking.service.name}</p>
+            <p className="text-xs text-muted-foreground">{confirmedBooking.service.category} · {confirmedBooking.service.durationMinutes}min</p>
+          </div>
+          <div className="px-4 py-3">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1">Date & Time</p>
+            <p className="text-sm font-semibold">{format(confirmedBooking.date, "EEE, MMM d, yyyy")}</p>
+            <p className="text-xs text-muted-foreground">{confirmedBooking.slot.startTime.slice(0, 5)} – {confirmedBooking.slot.endTime.slice(0, 5)}</p>
+          </div>
+          <div className="px-4 py-3">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1">Amount</p>
+            <p className="text-sm font-semibold">R{confirmedBooking.service.basePrice.toLocaleString()}</p>
+            <p className="text-xs text-muted-foreground">Payment will be collected once the host confirms</p>
+          </div>
+          <div className="px-4 py-3">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1">Booking ID</p>
+            <p className="text-xs font-mono text-muted-foreground">{confirmedBooking.id}</p>
+          </div>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Button variant="outline" className="flex-1" onClick={() => setConfirmedBooking(null)}>
+            Book Another
+          </Button>
+          <Link href="/dashboard/client/bookings" className="flex-1">
+            <Button className="w-full">View My Bookings</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8 py-4 sm:py-6 px-3 sm:px-4 md:px-6">
@@ -220,14 +265,14 @@ export default function BookPage() {
               className="w-full text-xs sm:text-sm h-10 sm:h-11"
             >
               {bookingMutation.isPending ? "Processing..." : (
-                <><CreditCard className="w-4 h-4 shrink-0 mr-2" />Confirm & Pay into Escrow</>
+                <><CreditCard className="w-4 h-4 shrink-0 mr-2" />Request Booking</>
               )}
             </Button>
 
             <div className="flex items-start gap-2 sm:gap-2.5 rounded-xl bg-secondary/60 border border-primary/20 px-3 sm:px-4 py-2.5 sm:py-3">
               <AlertCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" strokeWidth={2} />
               <p className="text-xs sm:text-sm text-secondary-foreground">
-                Funds are held securely in escrow until service completion.
+                Your booking will be sent to the host for confirmation. Payment is collected after confirmation.
               </p>
             </div>
           </CardContent>

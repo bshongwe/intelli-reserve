@@ -20,6 +20,25 @@ const mapTimeSlot = (ts: any) => ({
 export function createServiceRoutes(pool: Pool): Router {
   const router = Router();
 
+  // GET /api/services/browse — all active services across all hosts (client-facing)
+  router.get('/browse', async (req: Request, res: Response) => {
+    try {
+      const result = await pool.query(
+        `SELECT id, host_id, name, description, category, duration_minutes, base_price, max_participants, is_active, created_at, updated_at
+         FROM services WHERE is_active = true ORDER BY created_at DESC`
+      );
+      res.json(result.rows.map((r: any) => ({
+        id: r.id, hostId: r.host_id, name: r.name, description: r.description,
+        category: r.category, durationMinutes: r.duration_minutes, basePrice: r.base_price,
+        maxParticipants: r.max_participants, isActive: r.is_active,
+        createdAt: r.created_at, updatedAt: r.updated_at,
+      })));
+    } catch (error: any) {
+      console.error('Error browsing services:', error);
+      res.status(500).json({ error: 'Failed to fetch services' });
+    }
+  });
+
   // GET /api/services?hostId=X
   router.get('/', async (req: Request, res: Response) => {
     try {

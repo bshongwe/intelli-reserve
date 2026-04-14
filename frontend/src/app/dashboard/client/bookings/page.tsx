@@ -97,7 +97,7 @@ export default function ClientBookingsPage() {
                         <Calendar className="w-4 h-4 text-primary" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold truncate">{booking.serviceId}</p>
+                        <p className="text-sm font-semibold truncate">{booking.notes || "Service Booking"}</p>
                         <p className="text-xs text-muted-foreground mt-0.5">
                           Booked {new Date(booking.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                         </p>

@@ -11,6 +11,7 @@ const PROTO_PATH = path.join(__dirname, '../../..', 'backend/proto');
 const BACKEND_URL = process.env.BACKEND_GRPC_URL || 'localhost:8090';
 const ANALYTICS_URL = process.env.ANALYTICS_GRPC_URL || 'localhost:8091';
 const INVENTORY_URL = process.env.INVENTORY_GRPC_URL || 'localhost:8092';
+const SERVICES_URL = process.env.SERVICES_GRPC_URL || 'localhost:8093';
 
 // Package definitions
 let bookingPackageDef: any;
@@ -80,7 +81,7 @@ export async function initializeGRPCClients(): Promise<void> {
 
     bookingClient = new BookingService(BACKEND_URL, grpc.credentials.createInsecure());
     analyticsClient = new AnalyticsService(ANALYTICS_URL, grpc.credentials.createInsecure());
-    servicesClient = new ServicesManagement(BACKEND_URL, grpc.credentials.createInsecure());
+    servicesClient = new ServicesManagement(SERVICES_URL, grpc.credentials.createInsecure());
     inventoryClient = new InventoryService(INVENTORY_URL, grpc.credentials.createInsecure());
 
     console.log('✅ gRPC clients initialized successfully');

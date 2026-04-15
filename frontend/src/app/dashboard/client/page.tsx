@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Calendar, CreditCard, Clock, CheckCircle2, Search, ArrowRight, ShieldCheck } from "lucide-react";
 import Link from "next/link";
-import { bookingsAPI } from "@/lib/api";
+import { bookingsAPI, servicesAPI } from "@/lib/api";
 
 export default function ClientDashboard() {
   const { user } = useAuth();
@@ -17,6 +17,14 @@ export default function ClientDashboard() {
     enabled: !!user?.email,
     staleTime: 60 * 1000,
   });
+
+  const { data: services = [] } = useQuery({
+    queryKey: ["browse-services"],
+    queryFn: () => servicesAPI.getAllServices(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const serviceMap = Object.fromEntries(services.map((s) => [s.id, s]));
 
   const upcoming = bookings.filter((b: any) => b.status === "confirmed");
   const pending = bookings.filter((b: any) => b.status === "pending");
@@ -98,7 +106,7 @@ export default function ClientDashboard() {
                 {bookings.slice(0, 5).map((booking: any) => (
                   <div key={booking.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors">
                     <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{booking.serviceId}</p>
+                      <p className="text-sm font-medium truncate">{serviceMap[booking.serviceId]?.name ?? booking.serviceId}</p>
                       <p className="text-xs text-muted-foreground">{new Date(booking.createdAt).toLocaleDateString()}</p>
                     </div>
                     <span className={`text-xs font-semibold px-2 py-1 rounded-full ${

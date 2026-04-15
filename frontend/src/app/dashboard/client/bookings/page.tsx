@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock, CheckCircle2, XCircle, Search } from "lucide-react";
 import Link from "next/link";
-import { bookingsAPI } from "@/lib/api";
+import { bookingsAPI, servicesAPI } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const STATUS_FILTERS = ["all", "pending", "confirmed", "completed", "cancelled"] as const;
@@ -30,6 +30,14 @@ export default function ClientBookingsPage() {
     enabled: !!user?.email,
     staleTime: 60 * 1000,
   });
+
+  const { data: services = [] } = useQuery({
+    queryKey: ["browse-services"],
+    queryFn: () => servicesAPI.getAllServices(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const serviceMap = Object.fromEntries(services.map((s) => [s.id, s]));
 
   const filtered = filter === "all" ? bookings : bookings.filter((b: any) => b.status === filter);
 
@@ -97,8 +105,11 @@ export default function ClientBookingsPage() {
                         <Calendar className="w-4 h-4 text-primary" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold truncate">{booking.notes || "Service Booking"}</p>
+                        <p className="text-sm font-semibold truncate">{serviceMap[booking.serviceId]?.name ?? "Service Booking"}</p>
                         <p className="text-xs text-muted-foreground mt-0.5">
+                          {serviceMap[booking.serviceId]?.category && (
+                            <span className="mr-1.5">{serviceMap[booking.serviceId].category} ·</span>
+                          )}
                           Booked {new Date(booking.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                         </p>
                         <p className="text-xs font-mono text-muted-foreground truncate">ID: {booking.id}</p>

@@ -1,0 +1,139 @@
+syntax = "proto3";
+
+package intelli_reserve.identity;
+
+option go_package = "github.com/intelli-reserve/backend/gen/go/identity";
+
+service IdentityService {
+  rpc Register(RegisterRequest) returns (AuthResponse);
+  rpc Login(LoginRequest) returns (AuthResponse);
+  rpc RefreshToken(RefreshTokenRequest) returns (AuthResponse);
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+  rpc RevokeToken(RevokeTokenRequest) returns (RevokeTokenResponse);
+  rpc GetUser(GetUserRequest) returns (User);
+  rpc UpdateUser(UpdateUserRequest) returns (User);
+  rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse);
+  rpc GetUserSessions(GetUserSessionsRequest) returns (GetUserSessionsResponse);
+  rpc RevokeSession(RevokeSessionRequest) returns (RevokeSessionResponse);
+}
+
+message RegisterRequest {
+  string email = 1;
+  string password = 2;
+  string full_name = 3;
+  string user_type = 4;
+}
+
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message AuthResponse {
+  bool success = 1;
+  string user_id = 2;
+  string email = 3;
+  string full_name = 4;
+  string user_type = 5;
+  string access_token = 6;
+  string refresh_token = 7;
+  int64 expires_in = 8;
+  string error_message = 9;
+  string created_at = 10;
+  string updated_at = 11;
+}
+
+message RefreshTokenRequest {
+  string refresh_token = 1;
+  string user_id = 2;
+}
+
+message ValidateTokenRequest {
+  string access_token = 1;
+}
+
+message ValidateTokenResponse {
+  bool valid = 1;
+  string user_id = 2;
+  string email = 3;
+  string user_type = 4;
+  string error_message = 5;
+}
+
+message RevokeTokenRequest {
+  string user_id = 1;
+  string access_token = 2;
+}
+
+message RevokeTokenResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
+message GetUserRequest {
+  string user_id = 1;
+}
+
+message User {
+  string id = 1;
+  string email = 2;
+  string full_name = 3;
+  string user_type = 4;
+  string phone = 5;
+  string bio = 6;
+  string profile_image_url = 7;
+  bool email_verified = 8;
+  bool phone_verified = 9;
+  string created_at = 10;
+  string updated_at = 11;
+  string last_login_at = 12;
+}
+
+message UpdateUserRequest {
+  string user_id = 1;
+  string full_name = 2;
+  string phone = 3;
+  string bio = 4;
+  string profile_image_url = 5;
+}
+
+message ChangePasswordRequest {
+  string user_id = 1;
+  string current_password = 2;
+  string new_password = 3;
+}
+
+message ChangePasswordResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
+message GetUserSessionsRequest {
+  string user_id = 1;
+}
+
+message Session {
+  string session_id = 1;
+  string user_id = 2;
+  string ip_address = 3;
+  string user_agent = 4;
+  string created_at = 5;
+  string expires_at = 6;
+  string last_activity_at = 7;
+}
+
+message GetUserSessionsResponse {
+  bool success = 1;
+  repeated Session sessions = 2;
+  string error_message = 3;
+}
+
+message RevokeSessionRequest {
+  string user_id = 1;
+  string session_id = 2;
+}
+
+message RevokeSessionResponse {
+  bool success = 1;
+  string error_message = 2;
+}

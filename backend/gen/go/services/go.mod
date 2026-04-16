@@ -1,4 +1,4 @@
-module github.com/intelli-reserve/backend/gen/go/inventory
+module github.com/intelli-reserve/backend/gen/go/services
 
 go 1.23
 

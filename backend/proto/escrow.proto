@@ -1,0 +1,274 @@
+syntax = "proto3";
+
+package intelli_reserve.escrow;
+
+import "common.proto";
+
+option go_package = "github.com/intelli-reserve/backend/gen/go/escrow";
+option java_multiple_files = true;
+option java_package = "com.intelli_reserve.escrow";
+
+// Escrow Service - handles payment holds, management, and safe transactions
+service EscrowService {
+  // Hold operations
+  rpc CreateHold(CreateHoldRequest) returns (CreateHoldResponse);
+  rpc GetHold(GetHoldRequest) returns (GetHoldResponse);
+  rpc ReleaseHold(ReleaseHoldRequest) returns (ReleaseHoldResponse);
+  rpc RefundHold(RefundHoldRequest) returns (RefundHoldResponse);
+  
+  // Account operations
+  rpc GetEscrowAccount(GetEscrowAccountRequest) returns (GetEscrowAccountResponse);
+  rpc GetAvailableBalance(GetAvailableBalanceRequest) returns (GetAvailableBalanceResponse);
+  
+  // Payout operations
+  rpc RequestPayout(RequestPayoutRequest) returns (RequestPayoutResponse);
+  rpc GetPayoutStatus(GetPayoutStatusRequest) returns (GetPayoutStatusResponse);
+  rpc GetPayoutHistory(GetPayoutHistoryRequest) returns (GetPayoutHistoryResponse);
+  
+  // Audit operations
+  rpc GetTransactionHistory(GetTransactionHistoryRequest) returns (GetTransactionHistoryResponse);
+  
+  // Dispute operations
+  rpc OpenDispute(OpenDisputeRequest) returns (OpenDisputeResponse);
+  rpc GetDisputeStatus(GetDisputeStatusRequest) returns (GetDisputeStatusResponse);
+}
+
+// ============================================================================
+// COMMON TYPES
+// ============================================================================
+
+message Money {
+  int64 amount_cents = 1;
+  string currency = 2;
+}
+
+// ============================================================================
+// ESCROW ACCOUNT
+// ============================================================================
+
+message EscrowAccount {
+  string id = 1;
+  string host_id = 2;
+  Money held_balance = 3;
+  Money available_balance = 4;
+  Money total_received = 5;
+  Money total_paid_out = 6;
+  string account_status = 7;
+  string last_reconciled_at = 8;
+  string created_at = 9;
+  string updated_at = 10;
+}
+
+// ============================================================================
+// ESCROW HOLD
+// ============================================================================
+
+message EscrowHold {
+  string id = 1;
+  string booking_id = 2;
+  string host_id = 3;
+  string client_id = 4;
+  Money gross_amount = 5;
+  Money platform_fee = 6;
+  Money host_amount = 7;
+  string hold_status = 8;
+  string released_at = 9;
+  string refunded_at = 10;
+  string refund_reason = 11;
+  string created_at = 12;
+  string updated_at = 13;
+}
+
+// ============================================================================
+// PAYOUT
+// ============================================================================
+
+message Payout {
+  string id = 1;
+  string host_id = 2;
+  Money amount = 3;
+  string payout_status = 4;
+  string external_transaction_id = 5;
+  string failure_reason = 6;
+  string requested_at = 7;
+  string processing_started_at = 8;
+  string completed_at = 9;
+  string created_at = 10;
+}
+
+// ============================================================================
+// TRANSACTION
+// ============================================================================
+
+message EscrowTransaction {
+  string id = 1;
+  string transaction_type = 2;
+  Money amount = 3;
+  string booking_id = 4;
+  string payout_id = 5;
+  Money balance_before = 6;
+  Money balance_after = 7;
+  string description = 8;
+  string created_at = 9;
+}
+
+// ============================================================================
+// DISPUTE
+// ============================================================================
+
+message Dispute {
+  string id = 1;
+  string booking_id = 2;
+  string host_id = 3;
+  string client_id = 4;
+  string dispute_reason = 5;
+  string dispute_description = 6;
+  string dispute_status = 7;
+  string resolution_type = 8;
+  string opened_at = 9;
+  string resolved_at = 10;
+  string created_at = 11;
+}
+
+// ============================================================================
+// REQUEST/RESPONSE MESSAGES
+// ============================================================================
+
+message CreateHoldRequest {
+  string booking_id = 1;
+  string host_id = 2;
+  string client_id = 3;
+  int64 gross_amount_cents = 4;
+  int64 platform_fee_cents = 5;
+  string hold_reason = 6;
+}
+
+message CreateHoldResponse {
+  bool success = 1;
+  string error_message = 2;
+  EscrowHold hold = 3;
+}
+
+message GetHoldRequest {
+  string hold_id = 1;
+}
+
+message GetHoldResponse {
+  bool success = 1;
+  string error_message = 2;
+  EscrowHold hold = 3;
+}
+
+message ReleaseHoldRequest {
+  string hold_id = 1;
+  string host_id = 2;
+}
+
+message ReleaseHoldResponse {
+  bool success = 1;
+  string error_message = 2;
+  EscrowHold hold = 3;
+  EscrowAccount updated_account = 4;
+}
+
+message RefundHoldRequest {
+  string hold_id = 1;
+  string reason = 2;
+}
+
+message RefundHoldResponse {
+  bool success = 1;
+  string error_message = 2;
+  EscrowHold hold = 3;
+}
+
+message GetEscrowAccountRequest {
+  string host_id = 1;
+}
+
+message GetEscrowAccountResponse {
+  bool success = 1;
+  string error_message = 2;
+  EscrowAccount account = 3;
+}
+
+message GetAvailableBalanceRequest {
+  string host_id = 1;
+}
+
+message GetAvailableBalanceResponse {
+  bool success = 1;
+  string error_message = 2;
+  Money available_balance = 3;
+}
+
+message RequestPayoutRequest {
+  string host_id = 1;
+  int64 amount_cents = 2;
+}
+
+message RequestPayoutResponse {
+  bool success = 1;
+  string error_message = 2;
+  Payout payout = 3;
+}
+
+message GetPayoutStatusRequest {
+  string payout_id = 1;
+}
+
+message GetPayoutStatusResponse {
+  bool success = 1;
+  string error_message = 2;
+  Payout payout = 3;
+}
+
+message GetPayoutHistoryRequest {
+  string host_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message GetPayoutHistoryResponse {
+  bool success = 1;
+  string error_message = 2;
+  repeated Payout payouts = 3;
+  int32 total_count = 4;
+}
+
+message GetTransactionHistoryRequest {
+  string host_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message GetTransactionHistoryResponse {
+  bool success = 1;
+  string error_message = 2;
+  repeated EscrowTransaction transactions = 3;
+  int32 total_count = 4;
+}
+
+message OpenDisputeRequest {
+  string booking_id = 1;
+  string host_id = 2;
+  string client_id = 3;
+  string dispute_reason = 4;
+  string dispute_description = 5;
+}
+
+message OpenDisputeResponse {
+  bool success = 1;
+  string error_message = 2;
+  Dispute dispute = 3;
+}
+
+message GetDisputeStatusRequest {
+  string dispute_id = 1;
+}
+
+message GetDisputeStatusResponse {
+  bool success = 1;
+  string error_message = 2;
+  Dispute dispute = 3;
+}

@@ -10,6 +10,7 @@ import {
   servicesManagement,
   inventoryService,
   notificationService,
+  identityService,
 } from './client';
 
 /**
@@ -188,6 +189,36 @@ export const ServicesManagementAdapter = {
 
   async deleteTimeSlot(timeSlotId: string) {
     return await servicesManagement.deleteTimeSlot({ time_slot_id: timeSlotId });
+  },
+};
+
+/**
+ * IDENTITY SERVICE ADAPTERS
+ */
+
+export const IdentityServiceAdapter = {
+  async register(email: string, password: string, fullName: string, userType: string) {
+    return identityService.register({ email, password, full_name: fullName, user_type: userType });
+  },
+
+  async login(email: string, password: string) {
+    return identityService.login({ email, password });
+  },
+
+  async getUser(userId: string) {
+    return identityService.getUser({ user_id: userId });
+  },
+
+  async updateUser(userId: string, fullName: string, phone: string, bio: string, profileImageUrl: string) {
+    return identityService.updateUser({ user_id: userId, full_name: fullName, phone, bio, profile_image_url: profileImageUrl });
+  },
+
+  async refreshToken(userId: string, refreshToken: string) {
+    return identityService.refreshToken({ user_id: userId, refresh_token: refreshToken });
+  },
+
+  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+    return identityService.changePassword({ user_id: userId, current_password: currentPassword, new_password: newPassword });
   },
 };
 

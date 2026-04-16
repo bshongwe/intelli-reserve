@@ -111,5 +111,29 @@ services:
       retries: 3
       start_period: 5s
 
+  identity-service:
+    build:
+      context: .
+      dockerfile: backend/identity-service/Dockerfile
+    container_name: intelli-identity-service
+    ports:
+      - "8085:8085"
+      - "8095:8095"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: intelli_reserve
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8085/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
 volumes:
   postgres_data:

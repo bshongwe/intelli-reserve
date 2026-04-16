@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { BookingServiceAdapter } from '../grpc/adapters';
+import { BookingServiceAdapter, NotificationServiceAdapter, ServicesManagementAdapter } from '../grpc/adapters';
 
 const router = Router();
 
@@ -117,8 +117,27 @@ router.put('/:bookingId/status', async (req, res) => {
     }
 
     const response = await BookingServiceAdapter.updateBookingStatus(bookingId, validated.status);
+    const booking = response.booking;
 
-    res.json(mapBooking(response.booking));
+    // Fire notification asynchronously on terminal status changes — don't block the response
+    if (validated.status === 'confirmed' && booking) {
+      ServicesManagementAdapter.getService(booking.service_id ?? booking.serviceId)
+        .then((svcRes: any) => {
+          const svc = svcRes.service;
+          return NotificationServiceAdapter.sendBookingConfirmation(
+            bookingId,
+            booking.host_id ?? booking.hostId,
+            booking.client_email ?? booking.clientEmail,
+            booking.client_name ?? booking.clientName,
+            svc?.name ?? 'Service',
+            booking.slot_date ?? '',
+            booking.start_time ?? ''
+          );
+        })
+        .catch((err: any) => console.error('[Notification] Failed to send confirmation:', err));
+    }
+
+    res.json(mapBooking(booking));
   } catch (error: any) {
     if (error.name === 'ZodError') {
       res.status(400).json({ error: 'Validation failed', details: error.errors });
@@ -140,8 +159,26 @@ router.post('/:bookingId/cancel', async (req, res) => {
     }
 
     const response = await BookingServiceAdapter.cancelBooking(bookingId, validated.reason);
+    const booking = response.booking;
 
-    res.json(mapBooking(response.booking));
+    // Fire cancellation notification asynchronously
+    if (booking) {
+      ServicesManagementAdapter.getService(booking.service_id ?? booking.serviceId)
+        .then((svcRes: any) => {
+          const svc = svcRes.service;
+          return NotificationServiceAdapter.sendBookingCancellation(
+            bookingId,
+            booking.host_id ?? booking.hostId,
+            booking.client_email ?? booking.clientEmail,
+            booking.client_name ?? booking.clientName,
+            svc?.name ?? 'Service',
+            validated.reason ?? 'No reason provided'
+          );
+        })
+        .catch((err: any) => console.error('[Notification] Failed to send cancellation:', err));
+    }
+
+    res.json(mapBooking(booking));
   } catch (error: any) {
     if (error.name === 'ZodError') {
       res.status(400).json({ error: 'Validation failed', details: error.errors });

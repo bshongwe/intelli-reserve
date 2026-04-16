@@ -7,6 +7,7 @@ require (
 	github.com/google/uuid v1.5.0
 	github.com/intelli-reserve/backend/gen/go/identity v0.0.0
 	github.com/jackc/pgx/v5 v5.5.0
+	github.com/joho/godotenv v1.5.1
 	golang.org/x/crypto v0.17.0
 	google.golang.org/grpc v1.60.0
 )

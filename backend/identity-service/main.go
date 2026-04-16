@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/joho/godotenv"
 	pb "github.com/intelli-reserve/backend/gen/go/identity"
 	"github.com/jackc/pgx/v5"
 	"google.golang.org/grpc"
@@ -22,6 +23,11 @@ const (
 )
 
 func main() {
+	// Load .env file if present
+	if err := godotenv.Load(); err != nil {
+		log.Printf("No .env file found, using environment variables")
+	}
+
 	dbHost := os.Getenv("DB_HOST")
 	if dbHost == "" {
 		dbHost = "localhost"

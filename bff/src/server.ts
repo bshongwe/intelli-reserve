@@ -56,7 +56,7 @@ app.get('/health', (req, res) => {
 });
 
 // Routes
-app.use('/api/auth', createAuthRoutes(pool));
+app.use('/api/auth', createAuthRoutes());
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/dashboard', createDashboardRoutes());
 app.use('/api/services', createServiceRoutes(pool));

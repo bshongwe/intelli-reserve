@@ -213,6 +213,10 @@ export const IdentityServiceAdapter = {
     return identityService.updateUser({ user_id: userId, full_name: fullName, phone, bio, profile_image_url: profileImageUrl });
   },
 
+  async refreshToken(userId: string, refreshToken: string) {
+    return identityService.refreshToken({ user_id: userId, refresh_token: refreshToken });
+  },
+
   async changePassword(userId: string, currentPassword: string, newPassword: string) {
     return identityService.changePassword({ user_id: userId, current_password: currentPassword, new_password: newPassword });
   },

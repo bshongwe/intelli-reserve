@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	pb "github.com/intelli-reserve/backend/gen/go/identity"
@@ -17,17 +19,28 @@ import (
 // IdentityServiceServer implements the IdentityService gRPC service
 type IdentityServiceServer struct {
 	pb.UnimplementedIdentityServiceServer
-	db *pgx.Conn
-}
-
-// Helper function to format timestamps
-func formatTimestamp(t time.Time) string {
-	return t.Format(time.RFC3339)
+	db        *pgx.Conn
+	jwtSecret []byte
 }
 
 // NewIdentityServiceServer creates a new IdentityServiceServer
 func NewIdentityServiceServer(db *pgx.Conn) *IdentityServiceServer {
-	return &IdentityServiceServer{db: db}
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		log.Fatal("JWT_SECRET environment variable is not set")
+	}
+	return &IdentityServiceServer{db: db, jwtSecret: []byte(secret)}
+}
+
+func (s *IdentityServiceServer) signToken(userID, email, userType string) (string, error) {
+	claims := jwt.MapClaims{
+		"sub":      userID,
+		"email":    email,
+		"userType": userType,
+		"exp":      time.Now().UTC().Add(time.Hour).Unix(),
+		"iat":      time.Now().UTC().Unix(),
+	}
+	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(s.jwtSecret)
 }
 
 // Register creates a new user account
@@ -82,15 +95,22 @@ func (s *IdentityServiceServer) Register(ctx context.Context, req *pb.RegisterRe
 
 	log.Printf("✅ User registered: %s", userID)
 
-	// TODO: Generate JWT tokens
+	accessToken, err := s.signToken(returnedID, returnedEmail, returnedUserType)
+	if err != nil {
+		log.Printf("❌ Token signing error: %v", err)
+		return &pb.AuthResponse{Success: false, ErrorMessage: "Failed to sign token"}, status.Error(codes.Internal, "token signing failed")
+	}
+
 	return &pb.AuthResponse{
-		Success:    true,
-		UserId:     returnedID,
-		Email:      returnedEmail,
-		FullName:   returnedFullName,
-		UserType:   returnedUserType,
-		CreatedAt:  createdAt,
-		UpdatedAt:  updatedAt,
+		Success:     true,
+		UserId:      returnedID,
+		Email:       returnedEmail,
+		FullName:    returnedFullName,
+		UserType:    returnedUserType,
+		AccessToken: accessToken,
+		ExpiresIn:   3600,
+		CreatedAt:   createdAt,
+		UpdatedAt:   updatedAt,
 	}, nil
 }
 
@@ -145,15 +165,22 @@ func (s *IdentityServiceServer) Login(ctx context.Context, req *pb.LoginRequest)
 
 	log.Printf("✅ User logged in: %s", userID)
 
-	// TODO: Generate JWT tokens
+	accessToken, err := s.signToken(userID, email, userType)
+	if err != nil {
+		log.Printf("❌ Token signing error: %v", err)
+		return &pb.AuthResponse{Success: false, ErrorMessage: "Failed to sign token"}, status.Error(codes.Internal, "token signing failed")
+	}
+
 	return &pb.AuthResponse{
-		Success:   true,
-		UserId:    userID,
-		Email:     email,
-		FullName:  fullName,
-		UserType:  userType,
-		CreatedAt: createdAt,
-		UpdatedAt: updatedAt,
+		Success:     true,
+		UserId:      userID,
+		Email:       email,
+		FullName:    fullName,
+		UserType:    userType,
+		AccessToken: accessToken,
+		ExpiresIn:   3600,
+		CreatedAt:   createdAt,
+		UpdatedAt:   updatedAt,
 	}, nil
 }
 
@@ -184,15 +211,22 @@ func (s *IdentityServiceServer) RefreshToken(ctx context.Context, req *pb.Refres
 
 	log.Printf("✅ Token refreshed for user: %s", userID)
 
-	// TODO: Generate new JWT tokens
+	accessToken, err := s.signToken(userID, email, userType)
+	if err != nil {
+		log.Printf("❌ Token signing error: %v", err)
+		return &pb.AuthResponse{Success: false, ErrorMessage: "Failed to sign token"}, status.Error(codes.Internal, "token signing failed")
+	}
+
 	return &pb.AuthResponse{
-		Success:   true,
-		UserId:    userID,
-		Email:     email,
-		FullName:  fullName,
-		UserType:  userType,
-		CreatedAt: createdAt,
-		UpdatedAt: updatedAt,
+		Success:     true,
+		UserId:      userID,
+		Email:       email,
+		FullName:    fullName,
+		UserType:    userType,
+		AccessToken: accessToken,
+		ExpiresIn:   3600,
+		CreatedAt:   createdAt,
+		UpdatedAt:   updatedAt,
 	}, nil
 }
 
@@ -207,12 +241,44 @@ func (s *IdentityServiceServer) ValidateToken(ctx context.Context, req *pb.Valid
 
 	log.Printf("✔️ Validating token")
 
-	// TODO: Validate JWT token and extract claims
-	// For now, return error
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		return &pb.ValidateTokenResponse{
+			Valid:        false,
+			ErrorMessage: "JWT_SECRET not configured",
+		}, status.Error(codes.Internal, "JWT_SECRET not configured")
+	}
+
+	token, err := jwt.Parse(req.AccessToken, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+		}
+		return s.jwtSecret, nil
+	})
+
+	if err != nil || !token.Valid {
+		log.Printf("❌ Token validation failed: %v", err)
+		return &pb.ValidateTokenResponse{
+			Valid:        false,
+			ErrorMessage: "Invalid or expired token",
+		}, nil
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return &pb.ValidateTokenResponse{
+			Valid:        false,
+			ErrorMessage: "Invalid token claims",
+		}, nil
+	}
+
+	log.Printf("✅ Token valid for user: %v", claims["sub"])
 	return &pb.ValidateTokenResponse{
-		Valid:        false,
-		ErrorMessage: "Token validation not yet implemented",
-	}, status.Error(codes.Unimplemented, "token validation not implemented")
+		Valid:     true,
+		UserId:    fmt.Sprintf("%v", claims["sub"]),
+		Email:     fmt.Sprintf("%v", claims["email"]),
+		UserType:  fmt.Sprintf("%v", claims["userType"]),
+	}, nil
 }
 
 // RevokeToken revokes an access token

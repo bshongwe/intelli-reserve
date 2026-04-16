@@ -13,6 +13,32 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// Error and log message constants
+const (
+	logValidationError       = "❌ Validation error: Missing required fields"
+	errMissingFields         = "missing required fields"
+	errInvalidArgument       = "missing required fields"
+	logDatabaseError         = "❌ Database error: %v"
+	logQueryError            = "❌ Query error: %v"
+	errFailedNotification    = "Failed to send notification: %v"
+	errFailedToSend          = "failed to send notification"
+	logNotificationSent      = "✅ Notification sent successfully: %s"
+	logCancellationSent      = "✅ Cancellation notification sent: %s"
+	logReminderSent          = "✅ Reminder notification sent: %s"
+	logPayoutSent            = "✅ Payout notification sent: %s"
+	logPreferencesRetrieved  = "✅ Preferences retrieved for user: %s"
+	logPreferencesUpdated    = "✅ Preferences updated for user: %s"
+	logCreatingDefaults      = "⚙️ Creating default preferences for user: %s"
+	logErrorCreating         = "❌ Error creating preferences: %v"
+	logUpdateError           = "❌ Update error: %v"
+	bookingIDTemplate        = "   Booking ID: %s"
+	clientEmailTemplate      = "   Client Email: %s"
+	hostIDTemplate           = "   Host ID: %s"
+	amountCentsTemplate      = "   Amount: %d cents"
+	missingFieldsBookingErr  = ": booking_id, client_email"
+	missingFieldsHostErr     = ": host_id, host_email"
+)
+
 // NotificationServiceServer implements the NotificationService gRPC service
 type NotificationServiceServer struct {
 	pb.UnimplementedNotificationServiceServer
@@ -33,16 +59,16 @@ func NewNotificationServiceServer(db *pgx.Conn) *NotificationServiceServer {
 func (s *NotificationServiceServer) SendBookingConfirmation(ctx context.Context, req *pb.SendBookingConfirmationRequest) (*pb.SendNotificationResponse, error) {
 	// Validate required fields
 	if req.BookingId == "" || req.ClientEmail == "" {
-		log.Printf("❌ Validation error: Missing required fields")
+		log.Printf(logValidationError)
 		return &pb.SendNotificationResponse{
 			Success:      false,
-			ErrorMessage: "Missing required fields: booking_id, client_email",
-		}, status.Error(codes.InvalidArgument, "missing required fields")
+			ErrorMessage: errMissingFields + missingFieldsBookingErr,
+		}, status.Error(codes.InvalidArgument, errInvalidArgument)
 	}
 
 	log.Printf("📧 SendBookingConfirmation request received:")
-	log.Printf("   Booking ID: %s", req.BookingId)
-	log.Printf("   Client Email: %s", req.ClientEmail)
+	log.Printf(bookingIDTemplate, req.BookingId)
+	log.Printf(clientEmailTemplate, req.ClientEmail)
 
 	notificationID := uuid.New().String()
 	now := time.Now().UTC()
@@ -64,14 +90,14 @@ func (s *NotificationServiceServer) SendBookingConfirmation(ctx context.Context,
 	).Scan(&returnedID)
 
 	if err != nil {
-		log.Printf("❌ Database error creating notification: %v", err)
+		log.Printf(logDatabaseError, err)
 		return &pb.SendNotificationResponse{
 			Success:      false,
-			ErrorMessage: fmt.Sprintf("Failed to send notification: %v", err),
-		}, status.Error(codes.Internal, "failed to send notification")
+			ErrorMessage: fmt.Sprintf(errFailedNotification, err),
+		}, status.Error(codes.Internal, errFailedToSend)
 	}
 
-	log.Printf("✅ Notification sent successfully: %s", notificationID)
+	log.Printf(logNotificationSent, notificationID)
 
 	return &pb.SendNotificationResponse{
 		Success:        true,
@@ -83,16 +109,16 @@ func (s *NotificationServiceServer) SendBookingConfirmation(ctx context.Context,
 func (s *NotificationServiceServer) SendBookingCancellation(ctx context.Context, req *pb.SendBookingCancellationRequest) (*pb.SendNotificationResponse, error) {
 	// Validate required fields
 	if req.BookingId == "" || req.ClientEmail == "" {
-		log.Printf("❌ Validation error: Missing required fields")
+		log.Printf(logValidationError)
 		return &pb.SendNotificationResponse{
 			Success:      false,
-			ErrorMessage: "Missing required fields: booking_id, client_email",
-		}, status.Error(codes.InvalidArgument, "missing required fields")
+			ErrorMessage: errMissingFields + missingFieldsBookingErr,
+		}, status.Error(codes.InvalidArgument, errInvalidArgument)
 	}
 
 	log.Printf("📧 SendBookingCancellation request received:")
-	log.Printf("   Booking ID: %s", req.BookingId)
-	log.Printf("   Client Email: %s", req.ClientEmail)
+	log.Printf(bookingIDTemplate, req.BookingId)
+	log.Printf(clientEmailTemplate, req.ClientEmail)
 
 	notificationID := uuid.New().String()
 	now := time.Now().UTC()
@@ -114,14 +140,14 @@ func (s *NotificationServiceServer) SendBookingCancellation(ctx context.Context,
 	).Scan(&returnedID)
 
 	if err != nil {
-		log.Printf("❌ Database error: %v", err)
+		log.Printf(logDatabaseError, err)
 		return &pb.SendNotificationResponse{
 			Success:      false,
-			ErrorMessage: fmt.Sprintf("Failed to send notification: %v", err),
-		}, status.Error(codes.Internal, "failed to send notification")
+			ErrorMessage: fmt.Sprintf(errFailedNotification, err),
+		}, status.Error(codes.Internal, errFailedToSend)
 	}
 
-	log.Printf("✅ Cancellation notification sent: %s", notificationID)
+	log.Printf(logCancellationSent, notificationID)
 
 	return &pb.SendNotificationResponse{
 		Success:        true,
@@ -133,15 +159,15 @@ func (s *NotificationServiceServer) SendBookingCancellation(ctx context.Context,
 func (s *NotificationServiceServer) SendReminderNotification(ctx context.Context, req *pb.SendReminderRequest) (*pb.SendNotificationResponse, error) {
 	// Validate required fields
 	if req.BookingId == "" || req.ClientEmail == "" {
-		log.Printf("❌ Validation error: Missing required fields")
+		log.Printf(logValidationError)
 		return &pb.SendNotificationResponse{
 			Success:      false,
-			ErrorMessage: "Missing required fields: booking_id, client_email",
-		}, status.Error(codes.InvalidArgument, "missing required fields")
+			ErrorMessage: errMissingFields + missingFieldsBookingErr,
+		}, status.Error(codes.InvalidArgument, errInvalidArgument)
 	}
 
 	log.Printf("📧 SendReminderNotification request received:")
-	log.Printf("   Booking ID: %s", req.BookingId)
+	log.Printf(bookingIDTemplate, req.BookingId)
 
 	notificationID := uuid.New().String()
 	now := time.Now().UTC()
@@ -162,14 +188,14 @@ func (s *NotificationServiceServer) SendReminderNotification(ctx context.Context
 	).Scan(&returnedID)
 
 	if err != nil {
-		log.Printf("❌ Database error: %v", err)
+		log.Printf(logDatabaseError, err)
 		return &pb.SendNotificationResponse{
 			Success:      false,
-			ErrorMessage: fmt.Sprintf("Failed to send notification: %v", err),
-		}, status.Error(codes.Internal, "failed to send notification")
+			ErrorMessage: fmt.Sprintf(errFailedNotification, err),
+		}, status.Error(codes.Internal, errFailedToSend)
 	}
 
-	log.Printf("✅ Reminder notification sent: %s", notificationID)
+	log.Printf(logReminderSent, notificationID)
 
 	return &pb.SendNotificationResponse{
 		Success:        true,
@@ -181,16 +207,16 @@ func (s *NotificationServiceServer) SendReminderNotification(ctx context.Context
 func (s *NotificationServiceServer) SendPayoutNotification(ctx context.Context, req *pb.SendPayoutRequest) (*pb.SendNotificationResponse, error) {
 	// Validate required fields
 	if req.HostId == "" || req.HostEmail == "" {
-		log.Printf("❌ Validation error: Missing required fields")
+		log.Printf(logValidationError)
 		return &pb.SendNotificationResponse{
 			Success:      false,
-			ErrorMessage: "Missing required fields: host_id, host_email",
-		}, status.Error(codes.InvalidArgument, "missing required fields")
+			ErrorMessage: errMissingFields + missingFieldsHostErr,
+		}, status.Error(codes.InvalidArgument, errInvalidArgument)
 	}
 
 	log.Printf("💰 SendPayoutNotification request received:")
-	log.Printf("   Host ID: %s", req.HostId)
-	log.Printf("   Amount: %d cents", req.AmountCents)
+	log.Printf(hostIDTemplate, req.HostId)
+	log.Printf(amountCentsTemplate, req.AmountCents)
 
 	notificationID := uuid.New().String()
 	now := time.Now().UTC()
@@ -211,14 +237,14 @@ func (s *NotificationServiceServer) SendPayoutNotification(ctx context.Context, 
 	).Scan(&returnedID)
 
 	if err != nil {
-		log.Printf("❌ Database error: %v", err)
+		log.Printf(logDatabaseError, err)
 		return &pb.SendNotificationResponse{
 			Success:      false,
-			ErrorMessage: fmt.Sprintf("Failed to send notification: %v", err),
-		}, status.Error(codes.Internal, "failed to send notification")
+			ErrorMessage: fmt.Sprintf(errFailedNotification, err),
+		}, status.Error(codes.Internal, errFailedToSend)
 	}
 
-	log.Printf("✅ Payout notification sent: %s", notificationID)
+	log.Printf(logPayoutSent, notificationID)
 
 	return &pb.SendNotificationResponse{
 		Success:        true,
@@ -255,7 +281,7 @@ func (s *NotificationServiceServer) GetNotificationPreferences(ctx context.Conte
 	if err != nil {
 		// If not found, create default preferences
 		if err.Error() == "no rows in result set" {
-			log.Printf("⚙️ Creating default preferences for user: %s", req.UserId)
+			log.Printf(logCreatingDefaults, req.UserId)
 			now := time.Now().UTC()
 
 			createQuery := `
@@ -272,14 +298,14 @@ func (s *NotificationServiceServer) GetNotificationPreferences(ctx context.Conte
 			)
 
 			if err != nil {
-				log.Printf("❌ Error creating preferences: %v", err)
+				log.Printf(logErrorCreating, err)
 				return &pb.GetPreferencesResponse{
 					Success:      false,
 					ErrorMessage: fmt.Sprintf("Error: %v", err),
 				}, status.Error(codes.Internal, "error creating preferences")
 			}
 		} else {
-			log.Printf("❌ Query error: %v", err)
+			log.Printf(logQueryError, err)
 			return &pb.GetPreferencesResponse{
 				Success:      false,
 				ErrorMessage: fmt.Sprintf("Error: %v", err),
@@ -290,7 +316,7 @@ func (s *NotificationServiceServer) GetNotificationPreferences(ctx context.Conte
 	prefs.CreatedAt = formatTimestamp(createdAt)
 	prefs.UpdatedAt = formatTimestamp(updatedAt)
 
-	log.Printf("✅ Preferences retrieved for user: %s", req.UserId)
+	log.Printf(logPreferencesRetrieved, req.UserId)
 
 	return &pb.GetPreferencesResponse{
 		Success:      true,
@@ -362,17 +388,17 @@ func (s *NotificationServiceServer) UpdateNotificationPreferences(ctx context.Co
 	)
 
 	if err != nil {
-		log.Printf("❌ Update error: %v", err)
+		log.Printf(logUpdateError, err)
 		return &pb.UpdatePreferencesResponse{
 			Success:      false,
-			ErrorMessage: fmt.Sprintf("Failed to update preferences: %v", err),
-		}, status.Error(codes.Internal, "failed to update preferences")
+			ErrorMessage: fmt.Sprintf(errFailedNotification, err),
+		}, status.Error(codes.Internal, errFailedToSend)
 	}
 
 	prefs.CreatedAt = formatTimestamp(createdAt)
 	prefs.UpdatedAt = formatTimestamp(updatedAt)
 
-	log.Printf("✅ Preferences updated for user: %s", req.UserId)
+	log.Printf(logPreferencesUpdated, req.UserId)
 
 	return &pb.UpdatePreferencesResponse{
 		Success:      true,

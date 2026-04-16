@@ -323,6 +323,11 @@ export const identityService = {
     return method(request);
   },
 
+  refreshToken: async (request: any) => {
+    const method = promisifyGRPCMethod(identityClient, 'RefreshToken');
+    return method(request);
+  },
+
   getUser: async (request: any) => {
     const method = promisifyGRPCMethod(identityClient, 'GetUser');
     return method(request);

@@ -1,5 +1,4 @@
 import { Router, type Request, type Response } from 'express';
-import { Pool } from 'pg';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { IdentityServiceAdapter } from '../grpc/adapters';
@@ -23,12 +22,9 @@ const cookieOptions = {
   maxAge: 3600000,
 };
 
-export function createAuthRoutes(pool: Pool): Router {
+export function createAuthRoutes(): Router {
   if (!process.env.JWT_SECRET) throw new Error('JWT_SECRET environment variable is not set');
   const JWT_SECRET = process.env.JWT_SECRET;
-
-  const signToken = (payload: { sub: string; email: string; userType: string }) =>
-    jwt.sign(payload, JWT_SECRET, { expiresIn: '1h', algorithm: 'HS256' });
 
   const router = Router();
 
@@ -42,8 +38,7 @@ export function createAuthRoutes(pool: Pool): Router {
         return res.status(401).json({ error: response.error_message || 'Invalid email or password' });
       }
 
-      const token = signToken({ sub: response.user_id, email: response.email, userType: response.user_type });
-      res.cookie('auth_token', token, cookieOptions);
+      res.cookie('auth_token', response.access_token, cookieOptions);
       res.json({ user: { id: response.user_id, email: response.email, fullName: response.full_name, userType: response.user_type } });
     } catch (error) {
       if (error instanceof z.ZodError) return res.status(400).json({ error: error.errors[0].message });
@@ -64,8 +59,7 @@ export function createAuthRoutes(pool: Pool): Router {
         return res.status(statusCode).json({ error: msg });
       }
 
-      const token = signToken({ sub: response.user_id, email: response.email, userType: response.user_type });
-      res.cookie('auth_token', token, cookieOptions);
+      res.cookie('auth_token', response.access_token, cookieOptions);
       res.status(201).json({ user: { id: response.user_id, email: response.email, fullName: response.full_name, userType: response.user_type } });
     } catch (error) {
       if (error instanceof z.ZodError) return res.status(400).json({ error: error.errors[0].message });
@@ -107,10 +101,15 @@ export function createAuthRoutes(pool: Pool): Router {
         return res.status(401).json({ error: 'Invalid or expired token' });
       }
 
-      const user = await IdentityServiceAdapter.getUser(decoded.sub);
-      const newToken = signToken({ sub: user.id, email: user.email, userType: user.user_type });
-      res.cookie('auth_token', newToken, cookieOptions);
-      res.json({ user: { id: user.id, email: user.email, fullName: user.full_name, userType: user.user_type } });
+      const response = await IdentityServiceAdapter.refreshToken(decoded.sub, token);
+
+      if (!response.success) {
+        res.clearCookie('auth_token');
+        return res.status(401).json({ error: response.error_message || 'Token refresh failed' });
+      }
+
+      res.cookie('auth_token', response.access_token, cookieOptions);
+      res.json({ user: { id: response.user_id, email: response.email, fullName: response.full_name, userType: response.user_type } });
     } catch {
       res.clearCookie('auth_token');
       res.status(401).json({ error: 'Token refresh failed' });

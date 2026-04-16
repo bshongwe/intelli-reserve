@@ -17,8 +17,9 @@ graph TB
     subgraph Services["🚀 Microservices Layer"]
         BS["Booking Service<br/>Go + gRPC<br/>Port: 8090<br/>- Create/Update/Cancel<br/>- List Bookings<br/>- Status Tracking"]
         AS["Analytics Service<br/>Go + gRPC<br/>Port: 8091<br/>- Revenue Trends<br/>- Occupancy Rates<br/>- Customer Stats"]
-        IS["Inventory Service<br/>Go + gRPC<br/>Port: 8092<br/>- Time Slots<br/>- Availability<br/>- Occupancy Track"]
-        NS["Notification Service<br/>Go + gRPC<br/>Port: 8093<br/>- Email<br/>- SMS<br/>- Push Notifications"]
+        IS["Inventory Service<br/>Go + gRPC<br/>Port: 8092<br/>- Time Slot Occupancy<br/>- Availability<br/>- Capacity Tracking"]
+        SS["Services Service<br/>Go + gRPC<br/>Port: 8093<br/>- Service CRUD<br/>- Time Slot Management<br/>- Host Service Listings"]
+        NS["Notification Service<br/>Go + gRPC<br/>Port: 8094<br/>- Email<br/>- SMS<br/>- Push Notifications"]
     end
     
     subgraph Data["💾 Data Persistence Layer"]
@@ -29,10 +30,12 @@ graph TB
     BFFE -->|gRPC| BS
     BFFE -->|gRPC| AS
     BFFE -->|gRPC| IS
+    BFFE -->|gRPC| SS
     BFFE -->|gRPC| NS
     BS -->|SQL| DB
     AS -->|SQL| DB
     IS -->|SQL| DB
+    SS -->|SQL| DB
     NS -->|SQL| DB
     
     style Client fill:#e1f5ff
@@ -79,6 +82,22 @@ graph TB
 - **Infrastructure as Code**: Terraform (in `/infra/terraform`)
 - **Docker Compose**: Local development environment
 
+## Service Port Registry
+
+| Service | HTTP (Health) | gRPC | Status |
+|---------|--------------|------|--------|
+| Frontend | 3000 | — | ✅ Live |
+| BFF | 3001 | — | ✅ Live |
+| Booking Service | 8080 | 8090 | ✅ Live |
+| Analytics Service | 8081 | 8091 | ✅ Live |
+| Inventory Service | 8082 | 8092 | ✅ Live |
+| Services Service | 8083 | 8093 | ✅ Live |
+| Notification Service | 8084 | 8094 | 🔲 Planned |
+| Identity Service | 8085 | 8095 | 🔲 Planned |
+| Escrow Service | 8086 | 8096 | 🔲 Planned |
+| Payout Service | 8087 | 8097 | 🔲 Planned |
+| Pricing Service | 8088 | 8098 | 🔲 Planned |
+
 ## Key Services Architecture
 
 ### Booking Service
@@ -108,6 +127,7 @@ sequenceDiagram
 - `GetClientBookings(clientEmail, status?)` → []Booking
 - `UpdateBookingStatus(bookingId, status)` → Booking
 - `CancelBooking(bookingId, reason)` → Booking
+- `DeleteBooking(bookingId)` → void
 
 **Data Models**:
 ```protobuf
@@ -128,25 +148,47 @@ message Booking {
 ```
 
 ### Analytics Service
-**Responsibility**: Aggregate and compute analytics metrics
+**Responsibility**: Aggregate and compute analytics metrics live from booking and service data
 
 **Core Methods**:
 - `GetDashboardMetrics(hostId)` → DashboardMetrics
-- `GetRevenueData(hostId, period)` → []RevenuePoint
-- `GetOccupancyData(hostId, period)` → []OccupancyPoint
-- `GetTopServices(hostId, limit)` → []ServiceStats
-- `GetTopCustomers(hostId, limit)` → []CustomerStats
+- `GetAnalytics(hostId, timeRange)` → AnalyticsData
+- `GetRevenueReport(hostId, startDate, endDate)` → RevenueReport
+- `GetBookingStatistics(hostId, timeRange)` → BookingStatistics
+
+**Note**: All metrics are computed live via SQL aggregation — no pre-aggregated snapshot tables exist. The `analytics` and `dashboard_metrics` tables were removed in migration 007.
 
 ### Inventory Service
-**Responsibility**: Manage available time slots and service capacity
+**Responsibility**: Track time slot occupancy and capacity in real time
 
 **Core Methods**:
-- `GetTimeSlots(serviceId, date)` → []TimeSlot
-- `CreateTimeSlot(serviceId, date, time)` → TimeSlot
-- `UpdateOccupancy(timeSlotId, bookedCount)` → TimeSlot
-- `GetAvailability(serviceId, dateRange)` → []DateAvailability
+- `GetTimeSlots(serviceId, date)` → []TimeSlotDetail
+- `CreateTimeSlot(serviceId, date, startTime, endTime, capacity)` → TimeSlotDetail
+- `UpdateOccupancy(timeSlotId, bookedCount)` → TimeSlotDetail
+- `GetAvailability(serviceId, dateFrom, dateTo)` → []DateAvailability
+- `BlockTimeSlot(timeSlotId, reason)` → TimeSlotDetail
+- `GetCapacityStatus(serviceId, date)` → CapacityStatus
 
-### Notification Service
+**Data Ownership**: The inventory service owns occupancy state (`booked_count`, `is_available` via blocking) on the `time_slots` table. Slot definition (create/delete) is owned by the services service.
+
+### Services Service
+**Responsibility**: Own the services and time slot definition domain — the foundational data that all other services depend on
+
+**Core Methods**:
+- `CreateService(hostId, name, description, category, durationMinutes, basePrice, maxParticipants)` → Service
+- `GetService(serviceId)` → Service
+- `GetHostServices(hostId, onlyActive?, limit?, offset?)` → []Service
+- `UpdateService(serviceId, fields...)` → Service
+- `DeleteService(serviceId)` → void
+- `CreateTimeSlot(serviceId, date, startTime, endTime)` → TimeSlot
+- `GetTimeSlot(timeSlotId)` → TimeSlot
+- `GetAvailableTimeSlots(serviceId, dateFrom, dateTo)` → []TimeSlot
+- `UpdateTimeSlotAvailability(timeSlotId, isAvailable)` → TimeSlot
+- `DeleteTimeSlot(timeSlotId)` → void
+
+**Data Ownership**: The services service is the authoritative owner of the `services` table and the slot definition layer of `time_slots`. Every booking and analytics query has a foreign key dependency on data this service manages.
+
+### Notification Service *(Planned — Port 8094)*
 **Responsibility**: Send communications to users
 
 **Core Methods**:
@@ -154,6 +196,29 @@ message Booking {
 - `SendBookingCancellation(bookingId, reason)` → void
 - `SendReminderNotification(bookingId, hoursBeforeStart)` → void
 - `SendPayoutNotification(hostId, amount)` → void
+
+## BFF Route → Service Mapping
+
+| BFF Route | Method(s) | Backend |
+|-----------|-----------|---------|
+| `/api/bookings` | POST, GET | Booking Service gRPC :8090 |
+| `/api/bookings/:id` | GET | Booking Service gRPC :8090 |
+| `/api/bookings/:id/status` | PUT | Booking Service gRPC :8090 |
+| `/api/bookings/:id/cancel` | POST | Booking Service gRPC :8090 |
+| `/api/dashboard/metrics` | GET | Analytics Service gRPC :8091 |
+| `/api/analytics` | GET | Analytics Service gRPC :8091 |
+| `/api/services` | GET, POST | Services Service gRPC :8093 |
+| `/api/services/:id` | PUT, PATCH, DELETE | Services Service gRPC :8093 |
+| `/api/services/bulk/delete` | POST | Services Service gRPC :8093 |
+| `/api/services/time-slots` | GET, POST | Services Service gRPC :8093 |
+| `/api/services/time-slots/:id` | DELETE | Services Service gRPC :8093 |
+| `/api/services/time-slots/:id/availability` | PATCH | Services Service gRPC :8093 |
+| `/api/services/time-slots/:id/block` | PATCH | Inventory Service gRPC :8092 |
+| `/api/services/availability` | GET | Inventory Service gRPC :8092 |
+| `/api/services/capacity` | GET | Inventory Service gRPC :8092 |
+| `/api/services/recurring-slots` | POST | Services Service gRPC :8093 |
+| `/api/auth/*` | * | Direct DB (identity service planned) |
+| `/api/users/*` | * | Direct DB (identity service planned) |
 
 ## Communication Patterns
 
@@ -163,6 +228,7 @@ Used for:
 - Fetching booking details
 - Retrieving time slot availability
 - Dashboard metrics queries
+- Service CRUD operations
 
 Example flow:
 ```
@@ -177,6 +243,16 @@ Planned for:
 - Payment processing → Escrow Service
 - Revenue calculations → Analytics Service
 - Audit logging
+
+## Data Ownership by Service
+
+```
+users                          ← Identity Service (planned, currently direct DB)
+  └── services                 ← Services Service (:8093)
+        └── time_slots         ← Services Service (definition) + Inventory Service (occupancy)
+              └── bookings     ← Booking Service (:8090)
+                    └── analytics queries  ← Analytics Service (:8091, read-only joins)
+```
 
 ## Timestamp Handling
 
@@ -254,8 +330,9 @@ useQuery({
 ```
 
 ### Database Query Optimization
-- Indexes on: `hostId`, `status`, `createdAt`, `serviceId`
-- Connection pooling with pgx (min: 5, max: 20 connections)
+- Indexes on: `hostId`, `status`, `createdAt`, `serviceId`, `clientEmail`
+- Composite indexes: `(host_id, status)`, `(host_id, created_at DESC)`, `(service_id, slot_date)`
+- Connection pooling with pgx
 - Prepared statements for recurring queries
 
 ## Error Handling
@@ -272,7 +349,7 @@ useQuery({
 
 3. **Service**: Go error handling
    - Database errors logged and returned as gRPC errors
-   - Status codes: 13 INTERNAL, 3 INVALID_ARGUMENT, etc.
+   - Status codes: 13 INTERNAL, 3 INVALID_ARGUMENT, 5 NOT_FOUND, etc.
 
 Example error response:
 ```json
@@ -308,20 +385,24 @@ Example error response:
 ```mermaid
 graph LR
     subgraph Local["🖥️ Local Development"]
-        DC["docker-compose<br/>up"]
         FE["Frontend<br/>:3000"]
         BFF["BFF<br/>:3001"]
         BS["Booking Svc<br/>:8090"]
+        AS["Analytics Svc<br/>:8091"]
+        IS["Inventory Svc<br/>:8092"]
+        SS["Services Svc<br/>:8093"]
         DB["PostgreSQL<br/>:5432"]
     end
     
-    DC --> FE
-    DC --> BFF
-    DC --> BS
-    DC --> DB
     FE -->|HTTP| BFF
     BFF -->|gRPC| BS
+    BFF -->|gRPC| AS
+    BFF -->|gRPC| IS
+    BFF -->|gRPC| SS
     BS -->|SQL| DB
+    AS -->|SQL| DB
+    IS -->|SQL| DB
+    SS -->|SQL| DB
     
     style Local fill:#e1f5ff
 ```
@@ -334,6 +415,9 @@ graph TB
             FE_D["Frontend<br/>Deployment"]
             BFF_D["BFF<br/>Deployment"]
             BS_D["Booking Service<br/>Deployment"]
+            AS_D["Analytics Service<br/>Deployment"]
+            IS_D["Inventory Service<br/>Deployment"]
+            SS_D["Services Service<br/>Deployment"]
             DB_SS["PostgreSQL<br/>StatefulSet"]
             ING["Ingress<br/>External Traffic"]
         end
@@ -347,7 +431,13 @@ graph TB
     ING -->|Routing| FE_D
     FE_D -->|HTTP| BFF_D
     BFF_D -->|gRPC| BS_D
+    BFF_D -->|gRPC| AS_D
+    BFF_D -->|gRPC| IS_D
+    BFF_D -->|gRPC| SS_D
     BS_D -->|SQL| DB_SS
+    AS_D -->|SQL| DB_SS
+    IS_D -->|SQL| DB_SS
+    SS_D -->|SQL| DB_SS
     
     style K8s fill:#e8f5e9
     style External fill:#ffebee
@@ -364,25 +454,30 @@ graph TB
 
 *Based on local development testing with 16+ bookings*
 
-## Known Limitations & Future Improvements
+## Current State & Roadmap
 
-### Current State
-- ✅ Booking CRUD operations
-- ✅ Status confirmation flow
-- ✅ Real-time dashboard updates
-- ✅ Pending bookings list UI
+### Live Services
+- ✅ Booking Service — full CRUD, status lifecycle
+- ✅ Analytics Service — live metrics, revenue, occupancy, booking stats
+- ✅ Inventory Service — time slot occupancy, availability, capacity tracking
+- ✅ Services Service — service CRUD, time slot definition management
+- ✅ Host Dashboard — pending bookings, metrics, revenue charts
+- ✅ Analytics Dashboard — revenue trends, top services, customer stats
+- ✅ My Services page — create, edit, delete, bulk actions
+- ✅ Booking creation flow — client-facing booking page
 
 ### To Implement
-- [ ] User authentication & authorization
-- [ ] Payment processing integration
-- [ ] Email/SMS notifications
+- [ ] Notification Service (Port 8094) — email/SMS on booking events
+- [ ] Identity Service (Port 8095) — proper auth, JWT, session management
+- [ ] Escrow Service (Port 8096) — payment holding and release
+- [ ] Payout Service (Port 8097) — host payout processing
+- [ ] Pricing Service (Port 8098) — dynamic pricing rules
 - [ ] Booking reschedule functionality
-- [ ] Service category filtering
 - [ ] Customer reviews & ratings
 - [ ] Admin dashboard
+- [ ] mTLS between services
+- [ ] Event-driven architecture (Kafka/RabbitMQ) for async flows
 - [ ] Advanced analytics (ML-based forecasting)
-- [ ] Multi-language support
-- [ ] Mobile app
 
 ## References
 

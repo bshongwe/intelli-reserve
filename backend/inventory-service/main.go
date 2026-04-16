@@ -2,57 +2,92 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 
-	"github.com/intelli-reserve/backend/inventory-service/internal/db"
-	"github.com/intelli-reserve/backend/inventory-service/internal/handlers"
-	"github.com/jackc/pgx/v5/pgxpool"
+	pb "github.com/intelli-reserve/backend/gen/go/inventory"
+	"github.com/jackc/pgx/v5"
 	"google.golang.org/grpc"
 )
 
+const (
+	httpPort = ":8082"
+	grpcPort = ":8092"
+)
+
 func main() {
-	// Database connection
-	dsn := os.Getenv("DATABASE_URL")
-	if dsn == "" {
-		dsn = "postgres://postgres:postgres@localhost:5432/intelli_reserve?sslmode=disable"
+	dbHost := os.Getenv("DB_HOST")
+	if dbHost == "" {
+		dbHost = "localhost"
+	}
+	dbPort := os.Getenv("DB_PORT")
+	if dbPort == "" {
+		dbPort = "5432"
+	}
+	dbUser := os.Getenv("DB_USER")
+	if dbUser == "" {
+		dbUser = "postgres"
+	}
+	dbPassword := os.Getenv("DB_PASSWORD")
+	if dbPassword == "" {
+		dbPassword = "postgres"
+	}
+	dbName := os.Getenv("DB_NAME")
+	if dbName == "" {
+		dbName = "intelli_reserve"
 	}
 
-	ctx := context.Background()
-	pool, err := pgxpool.New(ctx, dsn)
+	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", dbUser, dbPassword, dbHost, dbPort, dbName)
+	conn, err := pgx.Connect(context.Background(), connStr)
 	if err != nil {
-		log.Fatalf("Failed to create database pool: %v", err)
+		log.Fatalf("Unable to connect to database: %v", err)
 	}
-	defer pool.Close()
+	defer conn.Close(context.Background())
+	log.Printf("✅ Inventory Service connected to PostgreSQL DB")
 
-	// Test connection
-	if err := pool.Ping(ctx); err != nil {
-		log.Fatalf("Failed to ping database: %v", err)
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	go startHTTPServer()
+	go startGRPCServer(conn)
+
+	<-sigChan
+	log.Printf("🛑 Shutdown signal received")
+}
+
+func startHTTPServer() {
+	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{
+			"status":  "healthy",
+			"service": "inventory-service",
+			"grpc":    "available on " + grpcPort,
+		})
+	})
+
+	log.Printf("🚀 Inventory Service REST API server running on %s", httpPort)
+	if err := http.ListenAndServe(httpPort, nil); err != nil && err != http.ErrServerClosed {
+		log.Fatalf("HTTP Server error: %v", err)
 	}
-	log.Println("✓ Connected to PostgreSQL")
+}
 
-	// Initialize database schema
-	if err := db.InitializeSchema(ctx, pool); err != nil {
-		log.Fatalf("Failed to initialize schema: %v", err)
-	}
-	log.Println("✓ Database schema initialized")
-
-	// Create gRPC server
-	listener, err := net.Listen("tcp", ":50051")
+func startGRPCServer(db *pgx.Conn) {
+	listener, err := net.Listen("tcp", grpcPort)
 	if err != nil {
-		log.Fatalf("Failed to listen: %v", err)
+		log.Fatalf("Failed to listen for gRPC: %v", err)
 	}
 
-	server := grpc.NewServer()
-	
-	// Register services
-	inventory := handlers.NewInventoryService(pool)
-	handlers.RegisterInventoryServiceServer(server, inventory)
+	s := grpc.NewServer()
+	pb.RegisterInventoryServiceServer(s, NewInventoryServiceServer(db))
 
-	log.Println("🚀 Inventory Service running on :50051")
-	if err := server.Serve(listener); err != nil {
-		log.Fatalf("Failed to serve: %v", err)
+	log.Printf("🚀 Inventory Service gRPC server running on %s", grpcPort)
+	if err := s.Serve(listener); err != nil {
+		log.Fatalf("gRPC Server error: %v", err)
 	}
 }

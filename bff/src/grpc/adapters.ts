@@ -8,6 +8,7 @@ import {
   bookingService,
   analyticsService,
   servicesManagement,
+  inventoryService,
 } from './client';
 
 /**
@@ -148,101 +149,104 @@ export const AnalyticsServiceAdapter = {
  */
 
 export const ServicesManagementAdapter = {
-  async createService(
-    hostId: string,
-    name: string,
-    description: string,
-    category: string,
-    durationMinutes: number,
-    basePrice: number,
-    maxParticipants: number,
-    isActive: boolean = true
-  ) {
-    return await servicesManagement.createService({
-      host_id: hostId,
-      name,
-      description,
-      category,
-      duration_minutes: durationMinutes,
-      base_price: basePrice,
-      max_participants: maxParticipants,
-      is_active: isActive,
-    });
+  async getHostServices(hostId: string, onlyActive: boolean = false, limit: number = 50, offset: number = 0) {
+    return await servicesManagement.getHostServices({ host_id: hostId, only_active: onlyActive, limit, offset });
   },
 
   async getService(serviceId: string) {
-    return await servicesManagement.getService({
-      service_id: serviceId,
-    });
+    return await servicesManagement.getService({ service_id: serviceId });
   },
 
-  async getHostServices(
-    hostId: string,
-    onlyActive: boolean = true,
-    limit: number = 50,
-    offset: number = 0
-  ) {
-    return await servicesManagement.getHostServices({
-      host_id: hostId,
-      only_active: onlyActive,
-      limit,
-      offset,
-    });
+  async createService(hostId: string, name: string, description: string, category: string, durationMinutes: number, basePrice: number, maxParticipants: number, isActive: boolean = true) {
+    return await servicesManagement.createService({ host_id: hostId, name, description, category, duration_minutes: durationMinutes, base_price: basePrice, max_participants: maxParticipants, is_active: isActive });
   },
 
   async updateService(serviceId: string, updates: any) {
-    return await servicesManagement.updateService({
-      service_id: serviceId,
-      ...updates,
-    });
+    return await servicesManagement.updateService({ service_id: serviceId, ...updates });
   },
 
   async deleteService(serviceId: string) {
-    return await servicesManagement.deleteService({
-      service_id: serviceId,
-    });
+    return await servicesManagement.deleteService({ service_id: serviceId });
   },
 
+  async createTimeSlot(serviceId: string, date: string, startTime: string, endTime: string, isAvailable: boolean = true) {
+    return await servicesManagement.createTimeSlot({ service_id: serviceId, date, start_time: startTime, end_time: endTime, is_available: isAvailable });
+  },
+
+  async getTimeSlot(timeSlotId: string) {
+    return await servicesManagement.getTimeSlot({ time_slot_id: timeSlotId });
+  },
+
+  async getAvailableTimeSlots(serviceId: string, dateFrom: string, dateTo: string) {
+    return await servicesManagement.getAvailableTimeSlots({ service_id: serviceId, date_from: dateFrom, date_to: dateTo });
+  },
+
+  async updateTimeSlotAvailability(timeSlotId: string, isAvailable: boolean) {
+    return await servicesManagement.updateTimeSlotAvailability({ time_slot_id: timeSlotId, is_available: isAvailable });
+  },
+
+  async deleteTimeSlot(timeSlotId: string) {
+    return await servicesManagement.deleteTimeSlot({ time_slot_id: timeSlotId });
+  },
+};
+
+/**
+ * INVENTORY SERVICE ADAPTERS
+ */
+
+export const InventoryServiceAdapter = {
   async createTimeSlot(
     serviceId: string,
     date: string,
     startTime: string,
     endTime: string,
+    capacity: number,
     isAvailable: boolean = true
   ) {
-    return await servicesManagement.createTimeSlot({
+    return await inventoryService.createTimeSlot({
       service_id: serviceId,
       date,
       start_time: startTime,
       end_time: endTime,
+      capacity,
       is_available: isAvailable,
     });
   },
 
-  async getTimeSlot(timeSlotId: string) {
-    return await servicesManagement.getTimeSlot({
-      time_slot_id: timeSlotId,
+  async getTimeSlots(serviceId: string, date: string, status?: string) {
+    return await inventoryService.getTimeSlots({
+      service_id: serviceId,
+      date,
+      status: status || '',
     });
   },
 
-  async getAvailableTimeSlots(serviceId: string, dateFrom: string, dateTo: string) {
-    return await servicesManagement.getAvailableTimeSlots({
+  async updateOccupancy(timeSlotId: string, bookedCount: number) {
+    return await inventoryService.updateOccupancy({
+      time_slot_id: timeSlotId,
+      booked_count: bookedCount,
+    });
+  },
+
+  async getAvailability(serviceId: string, dateFrom: string, dateTo: string) {
+    return await inventoryService.getAvailability({
       service_id: serviceId,
       date_from: dateFrom,
       date_to: dateTo,
     });
   },
 
-  async updateTimeSlotAvailability(timeSlotId: string, isAvailable: boolean) {
-    return await servicesManagement.updateTimeSlotAvailability({
+  async blockTimeSlot(timeSlotId: string, reason?: string) {
+    return await inventoryService.blockTimeSlot({
       time_slot_id: timeSlotId,
-      is_available: isAvailable,
+      reason: reason || '',
     });
   },
 
-  async deleteTimeSlot(timeSlotId: string) {
-    return await servicesManagement.deleteTimeSlot({
-      time_slot_id: timeSlotId,
+  async getCapacityStatus(serviceId: string, date: string) {
+    return await inventoryService.getCapacityStatus({
+      service_id: serviceId,
+      date,
     });
   },
 };

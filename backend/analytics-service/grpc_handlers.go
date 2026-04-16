@@ -45,15 +45,12 @@ func (s *AnalyticsServiceServer) GetDashboardMetrics(ctx context.Context, req *p
 	var avgOccupancy float64
 	err = s.db.QueryRow(ctx,
 		`SELECT COALESCE(AVG(subq.occupancy_rate), 0)::float FROM (
-		   SELECT CASE WHEN ts.capacity > 0
-		     THEN (COUNT(b.id)::float / ts.capacity * 100)
+		   SELECT CASE WHEN s.max_participants > 0
+		     THEN (COALESCE(ts.booked_count, 0)::float / s.max_participants * 100)
 		     ELSE 0 END AS occupancy_rate
 		   FROM time_slots ts
-		   LEFT JOIN bookings b ON b.time_slot_id = ts.id
-		     AND b.status IN ('confirmed', 'completed')
-		     AND b.host_id = $1
-		   WHERE ts.service_id IN (SELECT id FROM services WHERE host_id = $1)
-		   GROUP BY ts.id, ts.capacity
+		   JOIN services s ON s.id = ts.service_id
+		   WHERE s.host_id = $1
 		 ) subq`,
 		hostID).Scan(&avgOccupancy)
 	if err != nil {

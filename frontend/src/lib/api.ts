@@ -166,10 +166,10 @@ async function apiCall<T>(
 // Services API
 export const servicesAPI = {
   /**
-   * Get all available services (public listing)
+   * Get all available services (public listing for clients)
    */
   getAllServices: async (): Promise<Service[]> => {
-    return apiCall(`/services`);
+    return apiCall(`/services/browse`);
   },
 
   /**

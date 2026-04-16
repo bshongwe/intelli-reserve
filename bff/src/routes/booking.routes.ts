@@ -25,17 +25,17 @@ const CancelBookingSchema = z.object({
 
 const mapBooking = (booking: any) => ({
   id: booking.id,
-  serviceId: booking.serviceId,
-  timeSlotId: booking.timeSlotId,
-  hostId: booking.hostId,
-  clientName: booking.clientName,
-  clientEmail: booking.clientEmail,
-  clientPhone: booking.clientPhone,
-  numberOfParticipants: booking.numberOfParticipants,
+  serviceId: booking.service_id ?? booking.serviceId,
+  timeSlotId: booking.time_slot_id ?? booking.timeSlotId,
+  hostId: booking.host_id ?? booking.hostId,
+  clientName: booking.client_name ?? booking.clientName,
+  clientEmail: booking.client_email ?? booking.clientEmail,
+  clientPhone: booking.client_phone ?? booking.clientPhone,
+  numberOfParticipants: booking.number_of_participants ?? booking.numberOfParticipants,
   status: booking.status,
   notes: booking.notes,
-  createdAt: booking.createdAt,
-  updatedAt: booking.updatedAt,
+  createdAt: booking.created_at ?? booking.createdAt,
+  updatedAt: booking.updated_at ?? booking.updatedAt,
 });
 
 router.post('/', async (req, res) => {

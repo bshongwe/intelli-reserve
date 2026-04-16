@@ -1,488 +1,236 @@
 import { Router, Request, Response } from 'express';
-import { Pool } from 'pg';
 import { v4 as uuidv4 } from 'uuid';
+import { Pool } from 'pg';
+import { ServicesManagementAdapter } from '../grpc/adapters';
 
-// Types
-export interface ServiceRequest {
-  name: string;
-  description: string;
-  category: string;
-  durationMinutes: number;
-  basePrice: number;
-  maxParticipants: number;
-  isActive?: boolean;
-}
+const mapService = (s: any) => ({
+  id: s.id, hostId: s.host_id, name: s.name, description: s.description,
+  category: s.category, durationMinutes: s.duration_minutes, basePrice: s.base_price,
+  maxParticipants: s.max_participants, isActive: s.is_active,
+  createdAt: s.created_at, updatedAt: s.updated_at,
+});
 
-export interface ServiceResponse {
-  id: string;
-  hostId: string;
-  name: string;
-  description: string;
-  category: string;
-  durationMinutes: number;
-  basePrice: number;
-  maxParticipants: number;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface TimeSlotRequest {
-  serviceId: string;
-  slotDate: string; // YYYY-MM-DD
-  startTime: string; // HH:MM
-  endTime: string; // HH:MM
-}
-
-export interface TimeSlotResponse {
-  id: string;
-  serviceId: string;
-  slotDate: string;
-  startTime: string;
-  endTime: string;
-  isAvailable: boolean;
-  isRecurring: boolean;
-  recurringRuleId?: string;
-  bookedCount: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface RecurringSlotRequest {
-  serviceId: string;
-  startTime: string; // HH:MM
-  endTime: string; // HH:MM
-  daysOfWeek: number[]; // 0-6
-  startDate: string; // YYYY-MM-DD
-  endDate?: string; // YYYY-MM-DD
-}
-
-// Validation helpers
-function validateServiceRequest(req: ServiceRequest): string | null {
-  if (!req.name || req.name.length < 3 || req.name.length > 100) {
-    return 'Name must be 3-100 characters';
-  }
-  if (!req.description || req.description.length < 10 || req.description.length > 1000) {
-    return 'Description must be 10-1000 characters';
-  }
-  if (req.durationMinutes < 15 || req.durationMinutes > 480) {
-    return 'Duration must be 15-480 minutes';
-  }
-  if (req.basePrice < 100) {
-    return 'Price must be at least 100 cents';
-  }
-  if (req.maxParticipants < 1 || req.maxParticipants > 1000) {
-    return 'Max participants must be 1-1000';
-  }
-  return null;
-}
+const mapTimeSlot = (ts: any) => ({
+  id: ts.id, serviceId: ts.service_id, slotDate: ts.date,
+  startTime: ts.start_time, endTime: ts.end_time,
+  isAvailable: ts.is_available, isRecurring: false, bookedCount: 0,
+  createdAt: ts.created_at, updatedAt: ts.updated_at,
+});
 
 export function createServiceRoutes(pool: Pool): Router {
   const router = Router();
 
-  // Create service
-  router.post('/', async (req: Request, res: Response) => {
+  // GET /api/services/browse — all active services across all hosts (client-facing)
+  router.get('/browse', async (req: Request, res: Response) => {
     try {
-      const hostId = req.query.hostId as string;
-      if (!hostId) {
-        return res.status(400).json({ error: 'hostId required' });
-      }
-
-      const serviceReq: ServiceRequest = req.body;
-      const validationError = validateServiceRequest(serviceReq);
-      if (validationError) {
-        return res.status(400).json({ error: validationError });
-      }
-
-      const id = uuidv4();
-      const now = new Date().toISOString();
-
       const result = await pool.query(
-        `INSERT INTO services (id, host_id, name, description, category, duration_minutes, base_price, max_participants, is_active, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-        RETURNING *`,
-        [id, hostId, serviceReq.name, serviceReq.description, serviceReq.category, serviceReq.durationMinutes, serviceReq.basePrice, serviceReq.maxParticipants, serviceReq.isActive ?? true, now, now]
+        `SELECT id, host_id, name, description, category, duration_minutes, base_price, max_participants, is_active, created_at, updated_at
+         FROM services WHERE is_active = true ORDER BY created_at DESC`
       );
-
-      const service = result.rows[0];
-      res.status(201).json({
-        id: service.id,
-        hostId: service.host_id,
-        name: service.name,
-        description: service.description,
-        category: service.category,
-        durationMinutes: service.duration_minutes,
-        basePrice: service.base_price,
-        maxParticipants: service.max_participants,
-        isActive: service.is_active,
-        createdAt: service.created_at,
-        updatedAt: service.updated_at,
-      });
-    } catch (error) {
-      console.error('Error creating service:', error);
-      res.status(500).json({ error: 'Failed to create service' });
-    }
-  });
-
-  // Get services for host
-  router.get('/', async (req: Request, res: Response) => {
-    try {
-      const hostId = req.query.hostId as string;
-      if (!hostId) {
-        return res.status(400).json({ error: 'hostId required' });
-      }
-
-      const result = await pool.query(
-        `SELECT * FROM services WHERE host_id = $1 ORDER BY created_at DESC`,
-        [hostId]
-      );
-
-      const services: ServiceResponse[] = result.rows.map((row: any) => ({
-        id: row.id,
-        hostId: row.host_id,
-        name: row.name,
-        description: row.description,
-        category: row.category,
-        durationMinutes: row.duration_minutes,
-        basePrice: row.base_price,
-        maxParticipants: row.max_participants,
-        isActive: row.is_active,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-      }));
-
-      res.json(services);
-    } catch (error) {
-      console.error('Error fetching services:', error);
+      res.json(result.rows.map((r: any) => ({
+        id: r.id, hostId: r.host_id, name: r.name, description: r.description,
+        category: r.category, durationMinutes: r.duration_minutes, basePrice: r.base_price,
+        maxParticipants: r.max_participants, isActive: r.is_active,
+        createdAt: r.created_at, updatedAt: r.updated_at,
+      })));
+    } catch (error: any) {
+      console.error('Error browsing services:', error);
       res.status(500).json({ error: 'Failed to fetch services' });
     }
   });
 
-  // Get time slots for service
+  // GET /api/services?hostId=X
+  router.get('/', async (req: Request, res: Response) => {
+    try {
+      const hostId = req.query.hostId as string;
+      if (!hostId) return res.status(400).json({ error: 'hostId required' });
+
+      const response = await ServicesManagementAdapter.getHostServices(hostId);
+      if (!response.success) return res.status(500).json({ error: response.error_message || 'Failed to fetch services' });
+
+      res.json((response.services || []).map(mapService));
+    } catch (error: any) {
+      console.error('Error fetching services:', error);
+      res.status(500).json({ error: error?.details || error?.message || 'Failed to fetch services' });
+    }
+  });
+
+  // POST /api/services?hostId=X
+  router.post('/', async (req: Request, res: Response) => {
+    try {
+      const hostId = req.query.hostId as string;
+      if (!hostId) return res.status(400).json({ error: 'hostId required' });
+
+      const { name, description, category, durationMinutes, basePrice, maxParticipants, isActive } = req.body;
+      const response = await ServicesManagementAdapter.createService(
+        hostId, name, description, category, durationMinutes, basePrice, maxParticipants, isActive ?? true
+      );
+      if (!response.success) return res.status(500).json({ error: response.error_message || 'Failed to create service' });
+
+      res.status(201).json(mapService(response.service));
+    } catch (error: any) {
+      console.error('Error creating service:', error);
+      res.status(500).json({ error: error?.details || error?.message || 'Failed to create service' });
+    }
+  });
+
+  // PUT /api/services/:id
+  router.put('/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { name, description, category, durationMinutes, basePrice, maxParticipants, isActive } = req.body;
+      const response = await ServicesManagementAdapter.updateService(id, {
+        name, description, category,
+        duration_minutes: durationMinutes,
+        base_price: basePrice,
+        max_participants: maxParticipants,
+        is_active: isActive,
+      });
+      if (!response.success) return res.status(500).json({ error: response.error_message || 'Failed to update service' });
+
+      res.json(mapService(response.service));
+    } catch (error: any) {
+      console.error('Error updating service:', error);
+      res.status(500).json({ error: error?.details || error?.message || 'Failed to update service' });
+    }
+  });
+
+  // PATCH /api/services/:id  (toggle isActive)
+  router.patch('/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { isActive } = req.body;
+      if (isActive === undefined) return res.status(400).json({ error: 'isActive required' });
+
+      const response = await ServicesManagementAdapter.updateService(id, { is_active: isActive });
+      if (!response.success) return res.status(500).json({ error: response.error_message || 'Failed to update service' });
+
+      res.json(mapService(response.service));
+    } catch (error: any) {
+      console.error('Error toggling service status:', error);
+      res.status(500).json({ error: error?.details || error?.message || 'Failed to update service' });
+    }
+  });
+
+  // DELETE /api/services/:id
+  router.delete('/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const response = await ServicesManagementAdapter.deleteService(id);
+      if (!response.success) return res.status(500).json({ error: response.error_message || 'Failed to delete service' });
+
+      res.json({ message: 'Service deleted' });
+    } catch (error: any) {
+      console.error('Error deleting service:', error);
+      res.status(500).json({ error: error?.details || error?.message || 'Failed to delete service' });
+    }
+  });
+
+  // POST /api/services/bulk/delete  (direct DB — no bulk RPC in proto)
+  router.post('/bulk/delete', async (req: Request, res: Response) => {
+    try {
+      const { ids } = req.body;
+      if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'ids array required' });
+
+      await Promise.all(ids.map((id: string) => ServicesManagementAdapter.deleteService(id)));
+      res.json({ message: `${ids.length} services deleted`, count: ids.length });
+    } catch (error: any) {
+      console.error('Error bulk deleting services:', error);
+      res.status(500).json({ error: error?.details || error?.message || 'Failed to delete services' });
+    }
+  });
+
+  // ─── Time Slots ──────────────────────────────────────────────────────────────
+
+  // GET /api/services/time-slots?serviceId=X&date=Y
   router.get('/time-slots', async (req: Request, res: Response) => {
     try {
-      const serviceId = req.query.serviceId as string;
-      const slotDate = req.query.date as string;
+      const { serviceId, date } = req.query;
+      if (!serviceId || !date) return res.status(400).json({ error: 'serviceId and date required' });
 
-      if (!serviceId || !slotDate) {
-        return res.status(400).json({ error: 'serviceId and date required' });
-      }
-
-      const result = await pool.query(
-        `SELECT * FROM time_slots WHERE service_id = $1 AND slot_date::text = $2 ORDER BY start_time`,
-        [serviceId, slotDate]
+      const response = await ServicesManagementAdapter.getAvailableTimeSlots(
+        serviceId as string, date as string, date as string
       );
+      if (!response.success) return res.status(500).json({ error: response.error_message || 'Failed to fetch time slots' });
 
-      const slots: TimeSlotResponse[] = result.rows.map((row: any) => ({
-        id: row.id,
-        serviceId: row.service_id,
-        slotDate: row.slot_date,
-        startTime: row.start_time,
-        endTime: row.end_time,
-        isAvailable: row.is_available,
-        isRecurring: row.is_recurring,
-        recurringRuleId: row.recurring_rule_id,
-        bookedCount: row.booked_count,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-      }));
-
-      res.json(slots);
-    } catch (error) {
+      res.json((response.time_slots || []).map(mapTimeSlot));
+    } catch (error: any) {
       console.error('Error fetching time slots:', error);
-      res.status(500).json({ error: 'Failed to fetch time slots' });
+      res.status(500).json({ error: error?.details || error?.message || 'Failed to fetch time slots' });
     }
   });
 
-  // Create single time slot
+  // POST /api/services/time-slots
   router.post('/time-slots', async (req: Request, res: Response) => {
     try {
-      const slotReq: TimeSlotRequest = req.body;
-      const id = uuidv4();
-      const now = new Date().toISOString();
-
-      const result = await pool.query(
-        `INSERT INTO time_slots (id, service_id, slot_date, start_time, end_time, is_available, is_recurring, booked_count, created_at, updated_at)
-        VALUES ($1, $2, $3::date, $4::time, $5::time, $6, $7, $8, $9, $10)
-        RETURNING *`,
-        [id, slotReq.serviceId, slotReq.slotDate, slotReq.startTime, slotReq.endTime, true, false, 0, now, now]
-      );
-
-      const slot = result.rows[0];
-      res.status(201).json({
-        id: slot.id,
-        serviceId: slot.service_id,
-        slotDate: slot.slot_date,
-        startTime: slot.start_time,
-        endTime: slot.end_time,
-        isAvailable: slot.is_available,
-        isRecurring: slot.is_recurring,
-        bookedCount: slot.booked_count,
-        createdAt: slot.created_at,
-        updatedAt: slot.updated_at,
-      });
-    } catch (error) {
-      console.error('Error creating time slot:', error);
-      res.status(500).json({ error: 'Failed to create time slot' });
-    }
-  });
-
-  // Generate recurring slots
-  router.post('/recurring-slots', async (req: Request, res: Response) => {
-    try {
-      const slotReq: RecurringSlotRequest = req.body;
-      const startDate = new Date(slotReq.startDate);
-      const endDate = slotReq.endDate ? new Date(slotReq.endDate) : new Date(startDate.getTime() + 365 * 24 * 60 * 60 * 1000);
-
-      let generatedCount = 0;
-      const now = new Date().toISOString();
-
-      // Properly iterate through dates
-      const current = new Date(startDate);
-      while (current <= endDate) {
-        const dayOfWeek = current.getDay();
-
-        if (slotReq.daysOfWeek.includes(dayOfWeek)) {
-          const id = uuidv4();
-          // Format date as YYYY-MM-DD to avoid timezone issues
-          const year = current.getFullYear();
-          const month = String(current.getMonth() + 1).padStart(2, '0');
-          const day = String(current.getDate()).padStart(2, '0');
-          const dateStr = `${year}-${month}-${day}`;
-
-          await pool.query(
-            `INSERT INTO time_slots (id, service_id, slot_date, start_time, end_time, is_available, is_recurring, booked_count, created_at, updated_at)
-            VALUES ($1, $2, $3::date, $4::time, $5::time, $6, $7, $8, $9, $10)`,
-            [id, slotReq.serviceId, dateStr, slotReq.startTime, slotReq.endTime, true, true, 0, now, now]
-          );
-
-          generatedCount++;
-        }
-
-        // Move to next day
-        current.setDate(current.getDate() + 1);
+      const { serviceId, slotDate, startTime, endTime } = req.body;
+      if (!serviceId || !slotDate || !startTime || !endTime) {
+        return res.status(400).json({ error: 'serviceId, slotDate, startTime, endTime required' });
       }
 
-      res.status(201).json({
-        message: `Generated ${generatedCount} recurring slots`,
-        count: generatedCount,
-      });
-    } catch (error) {
-      console.error('Error generating recurring slots:', error);
-      res.status(500).json({ error: 'Failed to generate recurring slots' });
+      const response = await ServicesManagementAdapter.createTimeSlot(serviceId, slotDate, startTime, endTime, true);
+      if (!response.success) return res.status(500).json({ error: response.error_message || 'Failed to create time slot' });
+
+      res.status(201).json(mapTimeSlot(response.time_slot));
+    } catch (error: any) {
+      console.error('Error creating time slot:', error);
+      res.status(500).json({ error: error?.details || error?.message || 'Failed to create time slot' });
     }
   });
 
-  // Delete time slot
+  // DELETE /api/services/time-slots/:id
   router.delete('/time-slots/:id', async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const result = await pool.query(`DELETE FROM time_slots WHERE id = $1`, [id]);
-
-      if (result.rowCount === 0) {
-        return res.status(404).json({ error: 'Time slot not found' });
-      }
+      const response = await ServicesManagementAdapter.deleteTimeSlot(id);
+      if (!response.success) return res.status(500).json({ error: response.error_message || 'Failed to delete time slot' });
 
       res.json({ message: 'Time slot deleted' });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting time slot:', error);
-      res.status(500).json({ error: 'Failed to delete time slot' });
+      res.status(500).json({ error: error?.details || error?.message || 'Failed to delete time slot' });
     }
   });
 
-  // Update time slot availability
+  // PATCH /api/services/time-slots/:id/availability
   router.patch('/time-slots/:id/availability', async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       const { isAvailable } = req.body;
+      if (isAvailable === undefined) return res.status(400).json({ error: 'isAvailable required' });
 
-      if (isAvailable === undefined) {
-        return res.status(400).json({ error: 'isAvailable required' });
-      }
-
-      const now = new Date().toISOString();
-      const result = await pool.query(
-        `UPDATE time_slots SET is_available = $1, updated_at = $2 WHERE id = $3`,
-        [isAvailable, now, id]
-      );
-
-      if (result.rowCount === 0) {
-        return res.status(404).json({ error: 'Time slot not found' });
-      }
+      const response = await ServicesManagementAdapter.updateTimeSlotAvailability(id, isAvailable);
+      if (!response.success) return res.status(500).json({ error: response.error_message || 'Failed to update availability' });
 
       res.json({ message: 'Availability updated' });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating availability:', error);
-      res.status(500).json({ error: 'Failed to update availability' });
+      res.status(500).json({ error: error?.details || error?.message || 'Failed to update availability' });
     }
   });
 
-  // Update service
-  router.put('/:id', async (req: Request, res: Response) => {
+  // POST /api/services/recurring-slots  (direct DB — no recurring RPC in proto)
+  router.post('/recurring-slots', async (req: Request, res: Response) => {
     try {
-      const { id } = req.params;
-      const serviceReq: Partial<ServiceRequest> = req.body;
-      const now = new Date().toISOString();
+      const { serviceId, startTime, endTime, daysOfWeek, startDate, endDate } = req.body;
+      const start = new Date(startDate);
+      const end = endDate ? new Date(endDate) : new Date(start.getTime() + 365 * 24 * 60 * 60 * 1000);
+      let count = 0;
 
-      // Build dynamic update query
-      const updates: string[] = [];
-      const values: any[] = [];
-      let paramCount = 1;
-
-      if (serviceReq.name !== undefined) {
-        updates.push(`name = $${paramCount}`);
-        values.push(serviceReq.name);
-        paramCount++;
-      }
-      if (serviceReq.description !== undefined) {
-        updates.push(`description = $${paramCount}`);
-        values.push(serviceReq.description);
-        paramCount++;
-      }
-      if (serviceReq.category !== undefined) {
-        updates.push(`category = $${paramCount}`);
-        values.push(serviceReq.category);
-        paramCount++;
-      }
-      if (serviceReq.durationMinutes !== undefined) {
-        updates.push(`duration_minutes = $${paramCount}`);
-        values.push(serviceReq.durationMinutes);
-        paramCount++;
-      }
-      if (serviceReq.basePrice !== undefined) {
-        updates.push(`base_price = $${paramCount}`);
-        values.push(serviceReq.basePrice);
-        paramCount++;
-      }
-      if (serviceReq.maxParticipants !== undefined) {
-        updates.push(`max_participants = $${paramCount}`);
-        values.push(serviceReq.maxParticipants);
-        paramCount++;
-      }
-      if (serviceReq.isActive !== undefined) {
-        updates.push(`is_active = $${paramCount}`);
-        values.push(serviceReq.isActive);
-        paramCount++;
+      const current = new Date(start);
+      while (current <= end) {
+        if (daysOfWeek.includes(current.getDay())) {
+          const dateStr = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}-${String(current.getDate()).padStart(2, '0')}`;
+          const response = await ServicesManagementAdapter.createTimeSlot(serviceId, dateStr, startTime, endTime, true);
+          if (response.success) count++;
+        }
+        current.setDate(current.getDate() + 1);
       }
 
-      if (updates.length === 0) {
-        return res.status(400).json({ error: 'No fields to update' });
-      }
-
-      updates.push(`updated_at = $${paramCount}`);
-      values.push(now);
-      paramCount++;
-
-      values.push(id);
-
-      const result = await pool.query(
-        `UPDATE services SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`,
-        values
-      );
-
-      if (result.rowCount === 0) {
-        return res.status(404).json({ error: 'Service not found' });
-      }
-
-      const service = result.rows[0];
-      res.json({
-        id: service.id,
-        hostId: service.host_id,
-        name: service.name,
-        description: service.description,
-        category: service.category,
-        durationMinutes: service.duration_minutes,
-        basePrice: service.base_price,
-        maxParticipants: service.max_participants,
-        isActive: service.is_active,
-        createdAt: service.created_at,
-        updatedAt: service.updated_at,
-      });
-    } catch (error) {
-      console.error('Error updating service:', error);
-      res.status(500).json({ error: 'Failed to update service' });
-    }
-  });
-
-  // Delete single service
-  router.delete('/:id', async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      const result = await pool.query(`DELETE FROM services WHERE id = $1`, [id]);
-
-      if (result.rowCount === 0) {
-        return res.status(404).json({ error: 'Service not found' });
-      }
-
-      res.json({ message: 'Service deleted' });
-    } catch (error) {
-      console.error('Error deleting service:', error);
-      res.status(500).json({ error: 'Failed to delete service' });
-    }
-  });
-
-  // Bulk delete services
-  router.post('/bulk/delete', async (req: Request, res: Response) => {
-    try {
-      const { ids } = req.body;
-
-      if (!Array.isArray(ids) || ids.length === 0) {
-        return res.status(400).json({ error: 'ids array required' });
-      }
-
-      const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
-      const result = await pool.query(
-        `DELETE FROM services WHERE id IN (${placeholders})`,
-        ids
-      );
-
-      res.json({
-        message: `${result.rowCount} services deleted`,
-        count: result.rowCount,
-      });
-    } catch (error) {
-      console.error('Error bulk deleting services:', error);
-      res.status(500).json({ error: 'Failed to delete services' });
-    }
-  });
-
-  // Toggle service status
-  router.patch('/services/:id/status', async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      const { isActive } = req.body;
-
-      if (isActive === undefined) {
-        return res.status(400).json({ error: 'isActive required' });
-      }
-
-      const now = new Date().toISOString();
-      const result = await pool.query(
-        `UPDATE services SET is_active = $1, updated_at = $2 WHERE id = $3 RETURNING *`,
-        [isActive, now, id]
-      );
-
-      if (result.rowCount === 0) {
-        return res.status(404).json({ error: 'Service not found' });
-      }
-
-      const service = result.rows[0];
-      res.json({
-        id: service.id,
-        hostId: service.host_id,
-        name: service.name,
-        description: service.description,
-        category: service.category,
-        durationMinutes: service.duration_minutes,
-        basePrice: service.base_price,
-        maxParticipants: service.max_participants,
-        isActive: service.is_active,
-        createdAt: service.created_at,
-        updatedAt: service.updated_at,
-      });
-    } catch (error) {
-      console.error('Error toggling service status:', error);
-      res.status(500).json({ error: 'Failed to toggle service status' });
+      res.status(201).json({ message: `Generated ${count} recurring slots`, count });
+    } catch (error: any) {
+      console.error('Error generating recurring slots:', error);
+      res.status(500).json({ error: error?.details || error?.message || 'Failed to generate recurring slots' });
     }
   });
 

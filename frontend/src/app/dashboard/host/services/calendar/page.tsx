@@ -49,6 +49,7 @@ export default function AvailabilityCalendarPage() {
   const { data: services = [] } = useQuery({
     queryKey: ["host-services", hostId],
     queryFn: () => servicesAPI.getHostServices(hostId),
+    enabled: !!hostId,
   });
 
   // Set first service as default when services load

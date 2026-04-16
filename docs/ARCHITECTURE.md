@@ -498,13 +498,13 @@ graph TB
 - ✅ Analytics Service — live metrics, revenue, occupancy, booking stats
 - ✅ Inventory Service — time slot occupancy, availability, capacity tracking
 - ✅ Services Service — service CRUD, time slot definition management
+- ✅ Notification Service — email confirmations, cancellations, reminders, payouts, user preferences
 - ✅ Host Dashboard — pending bookings, metrics, revenue charts
 - ✅ Analytics Dashboard — revenue trends, top services, customer stats
 - ✅ My Services page — create, edit, delete, bulk actions
 - ✅ Booking creation flow — client-facing booking page
 
 ### To Implement
-- [ ] Notification Service (Port 8094) — email/SMS on booking events
 - [ ] Identity Service (Port 8095) — proper auth, JWT, session management
 - [ ] Escrow Service (Port 8096) — payment holding and release
 - [ ] Payout Service (Port 8097) — host payout processing
@@ -512,6 +512,7 @@ graph TB
 - [ ] Booking reschedule functionality
 - [ ] Customer reviews & ratings
 - [ ] Admin dashboard
+- [ ] Notification channels (SendGrid email, Twilio SMS, Firebase push)
 - [ ] mTLS between services
 - [ ] Event-driven architecture (Kafka/RabbitMQ) for async flows
 - [ ] Advanced analytics (ML-based forecasting)

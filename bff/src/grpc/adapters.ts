@@ -9,6 +9,7 @@ import {
   analyticsService,
   servicesManagement,
   inventoryService,
+  notificationService,
 } from './client';
 
 /**
@@ -187,6 +188,50 @@ export const ServicesManagementAdapter = {
 
   async deleteTimeSlot(timeSlotId: string) {
     return await servicesManagement.deleteTimeSlot({ time_slot_id: timeSlotId });
+  },
+};
+
+/**
+ * NOTIFICATION SERVICE ADAPTERS
+ */
+
+export const NotificationServiceAdapter = {
+  async sendBookingConfirmation(
+    bookingId: string,
+    hostId: string,
+    clientEmail: string,
+    clientName: string,
+    serviceName: string,
+    slotDate: string,
+    startTime: string
+  ) {
+    return notificationService.sendBookingConfirmation({
+      booking_id: bookingId,
+      host_id: hostId,
+      client_email: clientEmail,
+      client_name: clientName,
+      service_name: serviceName,
+      slot_date: slotDate,
+      start_time: startTime,
+    });
+  },
+
+  async sendBookingCancellation(
+    bookingId: string,
+    hostId: string,
+    clientEmail: string,
+    clientName: string,
+    serviceName: string,
+    reason: string
+  ) {
+    return notificationService.sendBookingCancellation({
+      booking_id: bookingId,
+      host_id: hostId,
+      client_email: clientEmail,
+      client_name: clientName,
+      service_name: serviceName,
+      reason,
+    });
   },
 };
 

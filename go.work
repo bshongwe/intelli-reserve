@@ -3,7 +3,13 @@ go 1.23
 use (
 	./backend/analytics-service
 	./backend/booking-service
+	./backend/gen/go/analytics
+	./backend/gen/go/booking
+	./backend/gen/go/common
 	./backend/gen/go/inventory
+	./backend/gen/go/notification
+	./backend/gen/go/services
 	./backend/inventory-service
+	./backend/notification-service
 	./backend/services-service
 )

@@ -8,8 +8,10 @@ use (
 	./backend/gen/go/common
 	./backend/gen/go/inventory
 	./backend/gen/go/notification
+	./backend/gen/go/identity
 	./backend/gen/go/services
 	./backend/inventory-service
 	./backend/notification-service
+	./backend/identity-service
 	./backend/services-service
 )

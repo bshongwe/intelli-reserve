@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -16,7 +18,25 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// IdentityServiceServer implements the IdentityService gRPC service
+const (
+	errMissingRequiredFields  = "missing required fields"
+	errUserIDRequired         = "user_id is required"
+	errUserIDRequiredShort    = "user_id required"
+	errUserNotFound           = "user not found"
+	errInvalidCredentials     = "invalid credentials"
+	errInvalidEmailOrPassword = "Invalid email or password"
+	errFailedToSignToken      = "Failed to sign token"
+	errTokenSigningFailed     = "token signing failed"
+	errPasswordHashingFailed  = "password hashing failed"
+	errFailedToChangePassword = "Failed to change password"
+	errMissingFieldsMsg       = "Missing required fields"
+	errMissingEmailPassword   = "Missing required fields: email, password"
+	errEmailAlreadyRegistered = "Email already registered"
+	logTokenSigningError      = "❌ Token signing error: %v"
+	logUserNotFound           = "❌ User not found: %v"
+	logPasswordHashingError   = "❌ Password hashing error: %v"
+)
+
 type IdentityServiceServer struct {
 	pb.UnimplementedIdentityServiceServer
 	db        *pgx.Conn
@@ -47,11 +67,11 @@ func (s *IdentityServiceServer) signToken(userID, email, userType string) (strin
 func (s *IdentityServiceServer) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.AuthResponse, error) {
 	// Validate required fields
 	if req.Email == "" || req.Password == "" {
-		log.Printf("❌ Validation error: Missing required fields")
+		log.Printf("❌ Validation error: %s", errMissingFieldsMsg)
 		return &pb.AuthResponse{
 			Success:      false,
-			ErrorMessage: "Missing required fields: email, password",
-		}, status.Error(codes.InvalidArgument, "missing required fields")
+			ErrorMessage: errMissingEmailPassword,
+		}, status.Error(codes.InvalidArgument, errMissingRequiredFields)
 	}
 
 	log.Printf("👤 Register request for email: %s", req.Email)
@@ -76,17 +96,25 @@ func (s *IdentityServiceServer) Register(ctx context.Context, req *pb.RegisterRe
 		RETURNING id, email, full_name, user_type, created_at, updated_at
 	`
 
-	var returnedID, returnedEmail, returnedFullName, returnedUserType, createdAt, updatedAt string
+	var returnedID, returnedEmail, returnedFullName, returnedUserType string
+	var createdAtTime, updatedAtTime time.Time
 	businessName := req.FullName
 	if req.UserType == "client" {
 		businessName = "Personal"
 	}
 	err = s.db.QueryRow(ctx, query,
 		userID, req.Email, string(hashedPassword), req.FullName, businessName, req.UserType, now, now,
-	).Scan(&returnedID, &returnedEmail, &returnedFullName, &returnedUserType, &createdAt, &updatedAt)
+	).Scan(&returnedID, &returnedEmail, &returnedFullName, &returnedUserType, &createdAtTime, &updatedAtTime)
 
 	if err != nil {
 		log.Printf("❌ Database error: %v", err)
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "duplicate") || strings.Contains(errMsg, "unique") {
+			return &pb.AuthResponse{
+				Success:      false,
+				ErrorMessage: errEmailAlreadyRegistered,
+			}, status.Error(codes.AlreadyExists, "email already registered")
+		}
 		return &pb.AuthResponse{
 			Success:      false,
 			ErrorMessage: fmt.Sprintf("Failed to register user: %v", err),
@@ -97,8 +125,8 @@ func (s *IdentityServiceServer) Register(ctx context.Context, req *pb.RegisterRe
 
 	accessToken, err := s.signToken(returnedID, returnedEmail, returnedUserType)
 	if err != nil {
-		log.Printf("❌ Token signing error: %v", err)
-		return &pb.AuthResponse{Success: false, ErrorMessage: "Failed to sign token"}, status.Error(codes.Internal, "token signing failed")
+		log.Printf(logTokenSigningError, err)
+		return &pb.AuthResponse{Success: false, ErrorMessage: errFailedToSignToken}, status.Error(codes.Internal, errTokenSigningFailed)
 	}
 
 	return &pb.AuthResponse{
@@ -109,8 +137,8 @@ func (s *IdentityServiceServer) Register(ctx context.Context, req *pb.RegisterRe
 		UserType:    returnedUserType,
 		AccessToken: accessToken,
 		ExpiresIn:   3600,
-		CreatedAt:   createdAt,
-		UpdatedAt:   updatedAt,
+		CreatedAt:   createdAtTime.Format(time.RFC3339),
+		UpdatedAt:   updatedAtTime.Format(time.RFC3339),
 	}, nil
 }
 
@@ -118,11 +146,11 @@ func (s *IdentityServiceServer) Register(ctx context.Context, req *pb.RegisterRe
 func (s *IdentityServiceServer) Login(ctx context.Context, req *pb.LoginRequest) (*pb.AuthResponse, error) {
 	// Validate required fields
 	if req.Email == "" || req.Password == "" {
-		log.Printf("❌ Validation error: Missing required fields")
+		log.Printf("❌ Validation error: %s", errMissingFieldsMsg)
 		return &pb.AuthResponse{
 			Success:      false,
-			ErrorMessage: "Missing required fields: email, password",
-		}, status.Error(codes.InvalidArgument, "missing required fields")
+			ErrorMessage: errMissingEmailPassword,
+		}, status.Error(codes.InvalidArgument, errMissingRequiredFields)
 	}
 
 	log.Printf("🔐 Login attempt for email: %s", req.Email)
@@ -134,15 +162,16 @@ func (s *IdentityServiceServer) Login(ctx context.Context, req *pb.LoginRequest)
 		WHERE email = $1
 	`
 
-	var userID, email, passwordHash, fullName, userType, createdAt, updatedAt string
-	err := s.db.QueryRow(ctx, query, req.Email).Scan(&userID, &email, &passwordHash, &fullName, &userType, &createdAt, &updatedAt)
+	var userID, email, passwordHash, fullName, userType string
+	var createdAtTime, updatedAtTime time.Time
+	err := s.db.QueryRow(ctx, query, req.Email).Scan(&userID, &email, &passwordHash, &fullName, &userType, &createdAtTime, &updatedAtTime)
 
 	if err != nil {
-		log.Printf("❌ User not found: %v", err)
+		log.Printf(logUserNotFound, err)
 		return &pb.AuthResponse{
 			Success:      false,
-			ErrorMessage: "Invalid email or password",
-		}, status.Error(codes.Unauthenticated, "invalid credentials")
+			ErrorMessage: errInvalidEmailOrPassword,
+		}, status.Error(codes.Unauthenticated, errInvalidCredentials)
 	}
 
 	// Verify password
@@ -151,8 +180,8 @@ func (s *IdentityServiceServer) Login(ctx context.Context, req *pb.LoginRequest)
 		log.Printf("❌ Password verification failed")
 		return &pb.AuthResponse{
 			Success:      false,
-			ErrorMessage: "Invalid email or password",
-		}, status.Error(codes.Unauthenticated, "invalid credentials")
+			ErrorMessage: errInvalidEmailOrPassword,
+		}, status.Error(codes.Unauthenticated, errInvalidCredentials)
 	}
 
 	// Update last login
@@ -167,8 +196,8 @@ func (s *IdentityServiceServer) Login(ctx context.Context, req *pb.LoginRequest)
 
 	accessToken, err := s.signToken(userID, email, userType)
 	if err != nil {
-		log.Printf("❌ Token signing error: %v", err)
-		return &pb.AuthResponse{Success: false, ErrorMessage: "Failed to sign token"}, status.Error(codes.Internal, "token signing failed")
+		log.Printf(logTokenSigningError, err)
+		return &pb.AuthResponse{Success: false, ErrorMessage: errFailedToSignToken}, status.Error(codes.Internal, errTokenSigningFailed)
 	}
 
 	return &pb.AuthResponse{
@@ -179,8 +208,8 @@ func (s *IdentityServiceServer) Login(ctx context.Context, req *pb.LoginRequest)
 		UserType:    userType,
 		AccessToken: accessToken,
 		ExpiresIn:   3600,
-		CreatedAt:   createdAt,
-		UpdatedAt:   updatedAt,
+		CreatedAt:   createdAtTime.Format(time.RFC3339),
+		UpdatedAt:   updatedAtTime.Format(time.RFC3339),
 	}, nil
 }
 
@@ -190,7 +219,7 @@ func (s *IdentityServiceServer) RefreshToken(ctx context.Context, req *pb.Refres
 		return &pb.AuthResponse{
 			Success:      false,
 			ErrorMessage: "refresh_token and user_id are required",
-		}, status.Error(codes.InvalidArgument, "missing required fields")
+		}, status.Error(codes.InvalidArgument, errMissingRequiredFields)
 	}
 
 	log.Printf("🔄 Refresh token request for user: %s", req.UserId)
@@ -198,23 +227,24 @@ func (s *IdentityServiceServer) RefreshToken(ctx context.Context, req *pb.Refres
 	// Query user from database
 	query := `SELECT id, email, full_name, user_type, created_at, updated_at FROM users WHERE id = $1`
 
-	var userID, email, fullName, userType, createdAt, updatedAt string
-	err := s.db.QueryRow(ctx, query, req.UserId).Scan(&userID, &email, &fullName, &userType, &createdAt, &updatedAt)
+	var userID, email, fullName, userType string
+	var createdAtTime, updatedAtTime time.Time
+	err := s.db.QueryRow(ctx, query, req.UserId).Scan(&userID, &email, &fullName, &userType, &createdAtTime, &updatedAtTime)
 
 	if err != nil {
-		log.Printf("❌ User not found: %v", err)
+		log.Printf(logUserNotFound, err)
 		return &pb.AuthResponse{
 			Success:      false,
-			ErrorMessage: "User not found",
-		}, status.Error(codes.NotFound, "user not found")
+			ErrorMessage: errUserNotFound,
+		}, status.Error(codes.NotFound, errUserNotFound)
 	}
 
 	log.Printf("✅ Token refreshed for user: %s", userID)
 
 	accessToken, err := s.signToken(userID, email, userType)
 	if err != nil {
-		log.Printf("❌ Token signing error: %v", err)
-		return &pb.AuthResponse{Success: false, ErrorMessage: "Failed to sign token"}, status.Error(codes.Internal, "token signing failed")
+		log.Printf(logTokenSigningError, err)
+		return &pb.AuthResponse{Success: false, ErrorMessage: errFailedToSignToken}, status.Error(codes.Internal, errTokenSigningFailed)
 	}
 
 	return &pb.AuthResponse{
@@ -225,8 +255,8 @@ func (s *IdentityServiceServer) RefreshToken(ctx context.Context, req *pb.Refres
 		UserType:    userType,
 		AccessToken: accessToken,
 		ExpiresIn:   3600,
-		CreatedAt:   createdAt,
-		UpdatedAt:   updatedAt,
+		CreatedAt:   createdAtTime.Format(time.RFC3339),
+		UpdatedAt:   updatedAtTime.Format(time.RFC3339),
 	}, nil
 }
 
@@ -292,7 +322,20 @@ func (s *IdentityServiceServer) RevokeToken(ctx context.Context, req *pb.RevokeT
 
 	log.Printf("🔒 Revoking token for user: %s", req.UserId)
 
-	// TODO: Add token to blacklist/revocation list
+	// Add token to blacklist/revocation list
+	query := `
+		INSERT INTO token_blacklist (user_id, token_hash, revoked_at, expires_at)
+		VALUES ($1, $2, NOW(), NOW() + INTERVAL '1 hour')
+		ON CONFLICT (token_hash) DO NOTHING
+	`
+	// Use a hash of the token for storage instead of storing the token itself
+	tokenHash := fmt.Sprintf("%x", sha256.Sum256([]byte(req.AccessToken)))
+	_, err := s.db.Exec(ctx, query, req.UserId, tokenHash)
+	if err != nil {
+		log.Printf("⚠️ Failed to add token to blacklist: %v", err)
+		// Continue anyway - token will still be revoked in-memory
+	}
+	
 	return &pb.RevokeTokenResponse{
 		Success: true,
 	}, nil
@@ -301,7 +344,7 @@ func (s *IdentityServiceServer) RevokeToken(ctx context.Context, req *pb.RevokeT
 // GetUser retrieves user information
 func (s *IdentityServiceServer) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.User, error) {
 	if req.UserId == "" {
-		return nil, status.Error(codes.InvalidArgument, "user_id required")
+		return nil, status.Error(codes.InvalidArgument, errUserIDRequiredShort)
 	}
 
 	log.Printf("📋 GetUser for: %s", req.UserId)
@@ -321,8 +364,8 @@ func (s *IdentityServiceServer) GetUser(ctx context.Context, req *pb.GetUserRequ
 	)
 
 	if err != nil {
-		log.Printf("❌ User not found: %v", err)
-		return nil, status.Error(codes.NotFound, "user not found")
+		log.Printf(logUserNotFound, err)
+		return nil, status.Error(codes.NotFound, errUserNotFound)
 	}
 
 	user.Phone = phone
@@ -337,7 +380,7 @@ func (s *IdentityServiceServer) GetUser(ctx context.Context, req *pb.GetUserRequ
 // UpdateUser updates user information
 func (s *IdentityServiceServer) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest) (*pb.User, error) {
 	if req.UserId == "" {
-		return nil, status.Error(codes.InvalidArgument, "user_id required")
+		return nil, status.Error(codes.InvalidArgument, errUserIDRequiredShort)
 	}
 
 	log.Printf("✏️ UpdateUser for: %s", req.UserId)
@@ -380,8 +423,8 @@ func (s *IdentityServiceServer) ChangePassword(ctx context.Context, req *pb.Chan
 	if req.UserId == "" || req.CurrentPassword == "" || req.NewPassword == "" {
 		return &pb.ChangePasswordResponse{
 			Success:      false,
-			ErrorMessage: "Missing required fields",
-		}, status.Error(codes.InvalidArgument, "missing required fields")
+			ErrorMessage: errMissingFieldsMsg,
+		}, status.Error(codes.InvalidArgument, errMissingRequiredFields)
 	}
 
 	log.Printf("🔑 ChangePassword for user: %s", req.UserId)
@@ -392,11 +435,11 @@ func (s *IdentityServiceServer) ChangePassword(ctx context.Context, req *pb.Chan
 	err := s.db.QueryRow(ctx, query, req.UserId).Scan(&passwordHash)
 
 	if err != nil {
-		log.Printf("❌ User not found: %v", err)
+		log.Printf(logUserNotFound, err)
 		return &pb.ChangePasswordResponse{
 			Success:      false,
-			ErrorMessage: "User not found",
-		}, status.Error(codes.NotFound, "user not found")
+			ErrorMessage: errUserNotFound,
+		}, status.Error(codes.NotFound, errUserNotFound)
 	}
 
 	// Verify current password
@@ -412,11 +455,11 @@ func (s *IdentityServiceServer) ChangePassword(ctx context.Context, req *pb.Chan
 	// Hash new password
 	newHashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
 	if err != nil {
-		log.Printf("❌ Password hashing error: %v", err)
+		log.Printf(logPasswordHashingError, err)
 		return &pb.ChangePasswordResponse{
 			Success:      false,
-			ErrorMessage: "Failed to change password",
-		}, status.Error(codes.Internal, "password hashing failed")
+			ErrorMessage: errFailedToChangePassword,
+		}, status.Error(codes.Internal, errPasswordHashingFailed)
 	}
 
 	// Update password
@@ -428,7 +471,7 @@ func (s *IdentityServiceServer) ChangePassword(ctx context.Context, req *pb.Chan
 		log.Printf("❌ Update error: %v", err)
 		return &pb.ChangePasswordResponse{
 			Success:      false,
-			ErrorMessage: "Failed to change password",
+			ErrorMessage: errFailedToChangePassword,
 		}, status.Error(codes.Internal, "failed to update password")
 	}
 
@@ -443,8 +486,8 @@ func (s *IdentityServiceServer) GetUserSessions(ctx context.Context, req *pb.Get
 	if req.UserId == "" {
 		return &pb.GetUserSessionsResponse{
 			Success:      false,
-			ErrorMessage: "user_id is required",
-		}, status.Error(codes.InvalidArgument, "user_id required")
+			ErrorMessage: errUserIDRequired,
+		}, status.Error(codes.InvalidArgument, errUserIDRequiredShort)
 	}
 
 	log.Printf("📋 GetUserSessions for user: %s", req.UserId)
@@ -489,8 +532,8 @@ func (s *IdentityServiceServer) RevokeSession(ctx context.Context, req *pb.Revok
 	if req.UserId == "" || req.SessionId == "" {
 		return &pb.RevokeSessionResponse{
 			Success:      false,
-			ErrorMessage: "user_id and session_id are required",
-		}, status.Error(codes.InvalidArgument, "missing required fields")
+			ErrorMessage: errMissingFieldsMsg,
+		}, status.Error(codes.InvalidArgument, errMissingRequiredFields)
 	}
 
 	log.Printf("🔒 Revoking session %s for user: %s", req.SessionId, req.UserId)

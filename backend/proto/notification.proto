@@ -1,0 +1,113 @@
+syntax = "proto3";
+
+package intelli_reserve.notification;
+
+import "common.proto";
+
+option go_package = "github.com/intelli-reserve/backend/gen/go/notification";
+option java_multiple_files = true;
+option java_package = "com.intelli_reserve.notification";
+
+// Notification Service - handles all notification operations
+
+service NotificationService {
+  // Send booking confirmation notification
+  rpc SendBookingConfirmation(SendBookingConfirmationRequest) returns (SendNotificationResponse);
+  
+  // Send booking cancellation notification
+  rpc SendBookingCancellation(SendBookingCancellationRequest) returns (SendNotificationResponse);
+  
+  // Send booking reminder notification
+  rpc SendReminderNotification(SendReminderRequest) returns (SendNotificationResponse);
+  
+  // Send payout notification
+  rpc SendPayoutNotification(SendPayoutRequest) returns (SendNotificationResponse);
+  
+  // Get notification preferences
+  rpc GetNotificationPreferences(GetPreferencesRequest) returns (GetPreferencesResponse);
+  
+  // Update notification preferences
+  rpc UpdateNotificationPreferences(UpdatePreferencesRequest) returns (UpdatePreferencesResponse);
+}
+
+// Request/Response messages
+
+message SendBookingConfirmationRequest {
+  string booking_id = 1;
+  string host_id = 2;
+  string client_email = 3;
+  string client_name = 4;
+  string service_name = 5;
+  string slot_date = 6;
+  string start_time = 7;
+}
+
+message SendBookingCancellationRequest {
+  string booking_id = 1;
+  string host_id = 2;
+  string client_email = 3;
+  string client_name = 4;
+  string service_name = 5;
+  string reason = 6;
+}
+
+message SendReminderRequest {
+  string booking_id = 1;
+  string host_id = 2;
+  string client_email = 3;
+  string client_name = 4;
+  string service_name = 5;
+  int32 hours_before_start = 6;
+}
+
+message SendPayoutRequest {
+  string host_id = 1;
+  string host_email = 2;
+  string host_name = 3;
+  int64 amount_cents = 4;
+  string currency = 5;
+}
+
+message SendNotificationResponse {
+  bool success = 1;
+  string notification_id = 2;
+  string error_message = 3;
+}
+
+message GetPreferencesRequest {
+  string user_id = 1;
+}
+
+message GetPreferencesResponse {
+  bool success = 1;
+  intelli_reserve.notification.NotificationPreferences preferences = 2;
+  string error_message = 3;
+}
+
+message UpdatePreferencesRequest {
+  string user_id = 1;
+  optional bool email_booking_confirmations = 2;
+  optional bool email_booking_reminders = 3;
+  optional bool email_payout_notifications = 4;
+  optional bool sms_booking_confirmations = 5;
+  optional bool sms_booking_reminders = 6;
+  optional bool push_notifications = 7;
+}
+
+message UpdatePreferencesResponse {
+  bool success = 1;
+  intelli_reserve.notification.NotificationPreferences preferences = 2;
+  string error_message = 3;
+}
+
+message NotificationPreferences {
+  string user_id = 1;
+  bool email_booking_confirmations = 2;
+  bool email_booking_reminders = 3;
+  bool email_payout_notifications = 4;
+  bool sms_booking_confirmations = 5;
+  bool sms_booking_reminders = 6;
+  bool push_notifications = 7;
+  string created_at = 8;
+  string updated_at = 9;
+}

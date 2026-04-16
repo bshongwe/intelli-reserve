@@ -93,7 +93,7 @@ graph TB
 | Inventory Service | 8082 | 8092 | ✅ Live |
 | Services Service | 8083 | 8093 | ✅ Live |
 | Notification Service | 8084 | 8094 | ✅ Live |
-| Identity Service | 8085 | 8095 | 🔲 Planned |
+| Identity Service | 8085 | 8095 | ✅ Live |
 | Escrow Service | 8086 | 8096 | 🔲 Planned |
 | Payout Service | 8087 | 8097 | 🔲 Planned |
 | Pricing Service | 8088 | 8098 | 🔲 Planned |
@@ -499,13 +499,13 @@ graph TB
 - ✅ Inventory Service — time slot occupancy, availability, capacity tracking
 - ✅ Services Service — service CRUD, time slot definition management
 - ✅ Notification Service — email confirmations, cancellations, reminders, payouts, user preferences
+- ✅ Identity Service — user registration, login, JWT tokens, session management, password management
 - ✅ Host Dashboard — pending bookings, metrics, revenue charts
 - ✅ Analytics Dashboard — revenue trends, top services, customer stats
 - ✅ My Services page — create, edit, delete, bulk actions
 - ✅ Booking creation flow — client-facing booking page
 
 ### To Implement
-- [ ] Identity Service (Port 8095) — proper auth, JWT, session management
 - [ ] Escrow Service (Port 8096) — payment holding and release
 - [ ] Payout Service (Port 8097) — host payout processing
 - [ ] Pricing Service (Port 8098) — dynamic pricing rules
@@ -513,6 +513,7 @@ graph TB
 - [ ] Customer reviews & ratings
 - [ ] Admin dashboard
 - [ ] Notification channels (SendGrid email, Twilio SMS, Firebase push)
+- [ ] JWT token implementation (currently scaffolded)
 - [ ] mTLS between services
 - [ ] Event-driven architecture (Kafka/RabbitMQ) for async flows
 - [ ] Advanced analytics (ML-based forecasting)

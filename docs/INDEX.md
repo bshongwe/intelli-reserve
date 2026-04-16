@@ -95,6 +95,7 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) → **Performance Benchmarks** and [DAT
 - **BFF**: Express.js, TypeScript, gRPC, Zod validation
 - **Services**: Go, gRPC, pgx
 - **Database**: PostgreSQL 12+
+- **Live Services**: Booking, Analytics, Inventory, Services, Notification
 
 ### Code Locations
 - Frontend code: `frontend/src/`

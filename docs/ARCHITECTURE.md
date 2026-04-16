@@ -92,7 +92,7 @@ graph TB
 | Analytics Service | 8081 | 8091 | ✅ Live |
 | Inventory Service | 8082 | 8092 | ✅ Live |
 | Services Service | 8083 | 8093 | ✅ Live |
-| Notification Service | 8084 | 8094 | 🔲 Planned |
+| Notification Service | 8084 | 8094 | ✅ Live |
 | Identity Service | 8085 | 8095 | 🔲 Planned |
 | Escrow Service | 8086 | 8096 | 🔲 Planned |
 | Payout Service | 8087 | 8097 | 🔲 Planned |
@@ -188,14 +188,46 @@ message Booking {
 
 **Data Ownership**: The services service is the authoritative owner of the `services` table and the slot definition layer of `time_slots`. Every booking and analytics query has a foreign key dependency on data this service manages.
 
-### Notification Service *(Planned — Port 8094)*
-**Responsibility**: Send communications to users
+### Notification Service
+**Responsibility**: Send communications to users across multiple channels
 
 **Core Methods**:
-- `SendBookingConfirmation(bookingId)` → void
-- `SendBookingCancellation(bookingId, reason)` → void
-- `SendReminderNotification(bookingId, hoursBeforeStart)` → void
-- `SendPayoutNotification(hostId, amount)` → void
+- `SendBookingConfirmation(bookingId, clientEmail, serviceName, slotDate, startTime, hostId)` → SendNotificationResponse
+- `SendBookingCancellation(bookingId, clientEmail, serviceName, reason, hostId)` → SendNotificationResponse
+- `SendReminderNotification(bookingId, clientEmail, serviceName, hoursBeforeStart, hostId)` → SendNotificationResponse
+- `SendPayoutNotification(hostId, hostEmail, amountCents, currency)` → SendNotificationResponse
+- `GetNotificationPreferences(userId)` → NotificationPreferences
+- `UpdateNotificationPreferences(userId, preferences)` → NotificationPreferences
+
+**Notification Channels**:
+- Email (primary)
+- SMS (optional)
+- Push notifications (optional)
+
+**Data Models**:
+```protobuf
+message SendNotificationResponse {
+  bool success = 1;
+  string notification_id = 2;
+  string error_message = 3;
+}
+
+message NotificationPreferences {
+  string user_id = 1;
+  bool email_booking_confirmations = 2;
+  bool email_booking_reminders = 3;
+  bool email_payout_notifications = 4;
+  bool sms_booking_confirmations = 5;
+  bool sms_booking_reminders = 6;
+  bool push_notifications = 7;
+  string created_at = 8;
+  string updated_at = 9;
+}
+```
+
+**Database Tables**:
+- `notifications` - Stores notification history (id, recipient_email, notification_type, subject, body, channel, status, booking_id, host_id, sent_at, failed_at, created_at, updated_at)
+- `notification_preferences` - User notification preferences (user_id, email_*, sms_*, push_*, timestamps)
 
 ## BFF Route → Service Mapping
 
@@ -217,6 +249,11 @@ message Booking {
 | `/api/services/availability` | GET | Inventory Service gRPC :8092 |
 | `/api/services/capacity` | GET | Inventory Service gRPC :8092 |
 | `/api/services/recurring-slots` | POST | Services Service gRPC :8093 |
+| `/api/notifications/booking/confirmation` | POST | Notification Service gRPC :8094 |
+| `/api/notifications/booking/cancellation` | POST | Notification Service gRPC :8094 |
+| `/api/notifications/reminder` | POST | Notification Service gRPC :8094 |
+| `/api/notifications/payout` | POST | Notification Service gRPC :8094 |
+| `/api/notifications/preferences` | GET, PUT | Notification Service gRPC :8094 |
 | `/api/auth/*` | * | Direct DB (identity service planned) |
 | `/api/users/*` | * | Direct DB (identity service planned) |
 

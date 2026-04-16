@@ -180,7 +180,7 @@ export function Header() {
   );
 }
 
-function NotificationIcon({ kind }: { kind: NotificationKind }) {
+function NotificationIcon({ kind }: Readonly<{ kind: NotificationKind }>) {
   const base = "w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5";
   switch (kind) {
     case "booking_confirmed":

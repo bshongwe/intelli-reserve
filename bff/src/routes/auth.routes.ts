@@ -1,8 +1,8 @@
 import { Router, type Request, type Response } from 'express';
 import { Pool } from 'pg';
 import jwt from 'jsonwebtoken';
-import bcrypt from 'bcrypt';
 import { z } from 'zod';
+import { IdentityServiceAdapter } from '../grpc/adapters';
 
 const LoginSchema = z.object({
   email: z.string().email('Invalid email'),
@@ -33,32 +33,22 @@ export function createAuthRoutes(pool: Pool): Router {
   const router = Router();
 
   router.post('/login', async (req: Request, res: Response) => {
-    const client = await pool.connect();
     try {
       const { email, password } = LoginSchema.parse(req.body);
 
-      const result = await client.query(
-        'SELECT id, email, password_hash, full_name, user_type, is_active FROM users WHERE email = $1',
-        [email]
-      );
+      const response = await IdentityServiceAdapter.login(email, password);
 
-      const user = result.rows[0];
+      if (!response.success) {
+        return res.status(401).json({ error: response.error_message || 'Invalid email or password' });
+      }
 
-      if (!user) return res.status(401).json({ error: 'Invalid email or password' });
-      if (!user.is_active) return res.status(403).json({ error: 'Account is inactive' });
-
-      const passwordMatch = await bcrypt.compare(password, user.password_hash);
-      if (!passwordMatch) return res.status(401).json({ error: 'Invalid email or password' });
-
-      const token = signToken({ sub: user.id, email: user.email, userType: user.user_type });
+      const token = signToken({ sub: response.user_id, email: response.email, userType: response.user_type });
       res.cookie('auth_token', token, cookieOptions);
-      res.json({ user: { id: user.id, email: user.email, fullName: user.full_name, userType: user.user_type } });
+      res.json({ user: { id: response.user_id, email: response.email, fullName: response.full_name, userType: response.user_type } });
     } catch (error) {
       if (error instanceof z.ZodError) return res.status(400).json({ error: error.errors[0].message });
       console.error('Login error:', error);
       res.status(500).json({ error: 'Login failed' });
-    } finally {
-      client.release();
     }
   });
 
@@ -66,23 +56,17 @@ export function createAuthRoutes(pool: Pool): Router {
     try {
       const { email, password, fullName, userType } = SignupSchema.parse(req.body);
 
-      const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
-      if (existing.rows.length > 0) return res.status(409).json({ error: 'Email already registered' });
+      const response = await IdentityServiceAdapter.register(email, password, fullName, userType);
 
-      const passwordHash = await bcrypt.hash(password, 12);
-      const businessName = userType === 'host' ? fullName : 'Personal';
+      if (!response.success) {
+        const msg = response.error_message || 'Signup failed';
+        const statusCode = msg.toLowerCase().includes('already') ? 409 : 500;
+        return res.status(statusCode).json({ error: msg });
+      }
 
-      const result = await pool.query(
-        `INSERT INTO users (id, email, password_hash, full_name, business_name, phone, user_type, is_active, created_at, updated_at)
-         VALUES (gen_random_uuid(), $1, $2, $3, $4, '', $5, true, NOW(), NOW())
-         RETURNING id, email, full_name, user_type`,
-        [email, passwordHash, fullName, businessName, userType]
-      );
-
-      const user = result.rows[0];
-      const token = signToken({ sub: user.id, email: user.email, userType: user.user_type });
+      const token = signToken({ sub: response.user_id, email: response.email, userType: response.user_type });
       res.cookie('auth_token', token, cookieOptions);
-      res.status(201).json({ user: { id: user.id, email: user.email, fullName: user.full_name, userType: user.user_type } });
+      res.status(201).json({ user: { id: response.user_id, email: response.email, fullName: response.full_name, userType: response.user_type } });
     } catch (error) {
       if (error instanceof z.ZodError) return res.status(400).json({ error: error.errors[0].message });
       console.error('Signup error:', error);
@@ -101,17 +85,8 @@ export function createAuthRoutes(pool: Pool): Router {
       if (!token) return res.status(401).json({ error: 'No session' });
 
       const decoded = jwt.verify(token, JWT_SECRET) as any;
-      const result = await pool.query(
-        'SELECT id, email, full_name, user_type FROM users WHERE id = $1 AND is_active = true',
-        [decoded.sub]
-      );
 
-      if (result.rows.length === 0) {
-        res.clearCookie('auth_token');
-        return res.status(401).json({ error: 'User not found' });
-      }
-
-      const user = result.rows[0];
+      const user = await IdentityServiceAdapter.getUser(decoded.sub);
       res.json({ user: { id: user.id, email: user.email, fullName: user.full_name, userType: user.user_type } });
     } catch {
       res.clearCookie('auth_token');
@@ -132,17 +107,7 @@ export function createAuthRoutes(pool: Pool): Router {
         return res.status(401).json({ error: 'Invalid or expired token' });
       }
 
-      const result = await pool.query(
-        'SELECT id, email, full_name, user_type FROM users WHERE id = $1 AND is_active = true',
-        [decoded.sub]
-      );
-
-      if (result.rows.length === 0) {
-        res.clearCookie('auth_token');
-        return res.status(401).json({ error: 'User not found' });
-      }
-
-      const user = result.rows[0];
+      const user = await IdentityServiceAdapter.getUser(decoded.sub);
       const newToken = signToken({ sub: user.id, email: user.email, userType: user.user_type });
       res.cookie('auth_token', newToken, cookieOptions);
       res.json({ user: { id: user.id, email: user.email, fullName: user.full_name, userType: user.user_type } });

@@ -15,7 +15,7 @@ const LABEL_REQUEST_PAYOUT = 'Request Payout';
 const MSG_REQUESTING = 'Requesting Payout...';
 const MSG_ERROR_DEFAULT = 'Failed to request payout';
 const MSG_VALIDATION_ERROR = 'Please fix the errors below';
-const MSG_MINIMUM_BALANCE = 'You need at least $1.00 to request a payout';
+const MSG_MINIMUM_BALANCE = 'You need at least R16.26 to request a payout';
 const PLACEHOLDER_AMOUNT = '0.00';
 const PLACEHOLDER_BANK = 'Select your bank account';
 

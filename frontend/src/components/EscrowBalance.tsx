@@ -1,8 +1,9 @@
 'use client';
 
 import { useEscrowAccount } from '@/hooks/useEscrow';
-import { formatCentsToUSD, getAccountStatusLabel } from '@/lib/escrow-api';
+import { formatCentsToZAR, getAccountStatusLabel } from '@/lib/escrow-api';
 import { AlertCircle } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 
 // ============================================================================
 // CONSTANTS: UI Labels & Messages
@@ -28,23 +29,27 @@ export function EscrowBalance({ hostId }: Readonly<EscrowBalanceProps>) {
 
   if (!hostId) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-        <div className="flex items-center gap-2 text-red-700">
-          <AlertCircle className="h-5 w-5" />
-          <span>{ERROR_REQUIRED_HOST_ID}</span>
-        </div>
-      </div>
+      <Card className="border-destructive/50 bg-destructive/5">
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-2 text-destructive">
+            <AlertCircle className="h-5 w-5" />
+            <span>{ERROR_REQUIRED_HOST_ID}</span>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={`skeleton-${i}`} className="rounded-lg border border-gray-200 p-6">
-            <div className="mb-2 h-4 w-24 rounded bg-gray-200 animate-pulse" />
-            <div className="h-8 w-32 rounded bg-gray-200 animate-pulse" />
-          </div>
+        {['held', 'available', 'received', 'paidout'].map((key) => (
+          <Card key={key}>
+            <CardContent className="pt-6">
+              <div className="mb-2 h-4 w-24 rounded bg-muted animate-pulse" />
+              <div className="h-8 w-32 rounded bg-muted animate-pulse" />
+            </CardContent>
+          </Card>
         ))}
       </div>
     );
@@ -52,28 +57,30 @@ export function EscrowBalance({ hostId }: Readonly<EscrowBalanceProps>) {
 
   if (error || !account) {
     return (
-      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-        <div className="flex items-center gap-2 text-amber-700">
-          <AlertCircle className="h-5 w-5" />
-          <span>{ERROR_FAILED_LOAD}</span>
-        </div>
-      </div>
+      <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-900/30 dark:bg-amber-950/20">
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-2 text-amber-700 dark:text-amber-600">
+            <AlertCircle className="h-5 w-5" />
+            <span>{ERROR_FAILED_LOAD}</span>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   // Determine color based on balances
-  const heldColor = account.heldBalanceCents > 0 ? 'text-yellow-600' : 'text-gray-600';
+  const heldColor = account.heldBalanceCents > 0 ? 'text-yellow-600 dark:text-yellow-400' : 'text-muted-foreground';
   const availableColor =
-    account.availableBalanceCents > 0 ? 'text-green-600' : 'text-gray-600';
+    account.availableBalanceCents > 0 ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground';
   
   const getStatusColor = (): string => {
     if (account.accountStatus === 'active') {
-      return 'bg-green-100 text-green-800';
+      return 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300';
     }
     if (account.accountStatus === 'suspended') {
-      return 'bg-yellow-100 text-yellow-800';
+      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300';
     }
-    return 'bg-red-100 text-red-800';
+    return 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300';
   };
 
   return (
@@ -89,40 +96,48 @@ export function EscrowBalance({ hostId }: Readonly<EscrowBalanceProps>) {
       {/* Balance Cards */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         {/* Held Balance */}
-        <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-          <p className="text-sm font-medium text-gray-600">{LABEL_HELD_BALANCE}</p>
-          <p className={`mt-2 text-2xl font-bold ${heldColor}`}>
-            {formatCentsToUSD(account.heldBalanceCents)}
-          </p>
-          <p className="mt-1 text-xs text-gray-500">Locked in bookings</p>
-        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm font-medium text-muted-foreground">{LABEL_HELD_BALANCE}</p>
+            <p className={`mt-2 text-2xl font-bold ${heldColor}`}>
+              {formatCentsToZAR(account.heldBalanceCents)}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">Locked in bookings</p>
+          </CardContent>
+        </Card>
 
         {/* Available Balance */}
-        <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-          <p className="text-sm font-medium text-gray-600">{LABEL_AVAILABLE_BALANCE}</p>
-          <p className={`mt-2 text-2xl font-bold ${availableColor}`}>
-            {formatCentsToUSD(account.availableBalanceCents)}
-          </p>
-          <p className="mt-1 text-xs text-gray-500">Ready for payout</p>
-        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm font-medium text-muted-foreground">{LABEL_AVAILABLE_BALANCE}</p>
+            <p className={`mt-2 text-2xl font-bold ${availableColor}`}>
+              {formatCentsToZAR(account.availableBalanceCents)}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">Ready for payout</p>
+          </CardContent>
+        </Card>
 
         {/* Total Received */}
-        <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-          <p className="text-sm font-medium text-gray-600">{LABEL_TOTAL_RECEIVED}</p>
-          <p className="mt-2 text-2xl font-bold text-blue-600">
-            {formatCentsToUSD(account.totalReceivedCents)}
-          </p>
-          <p className="mt-1 text-xs text-gray-500">Lifetime</p>
-        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm font-medium text-muted-foreground">{LABEL_TOTAL_RECEIVED}</p>
+            <p className="mt-2 text-2xl font-bold text-blue-600 dark:text-blue-400">
+              {formatCentsToZAR(account.totalReceivedCents)}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">Lifetime</p>
+          </CardContent>
+        </Card>
 
         {/* Total Paid Out */}
-        <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-          <p className="text-sm font-medium text-gray-600">{LABEL_TOTAL_PAID_OUT}</p>
-          <p className="mt-2 text-2xl font-bold text-indigo-600">
-            {formatCentsToUSD(account.totalPaidOutCents)}
-          </p>
-          <p className="mt-1 text-xs text-gray-500">Lifetime</p>
-        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm font-medium text-muted-foreground">{LABEL_TOTAL_PAID_OUT}</p>
+            <p className="mt-2 text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+              {formatCentsToZAR(account.totalPaidOutCents)}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">Lifetime</p>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

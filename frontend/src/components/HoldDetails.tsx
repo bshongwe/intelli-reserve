@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useHold, useReleaseHold, useRefundHold } from '@/hooks/useEscrow';
-import { formatCentsToUSD, formatDate, getHoldStatusLabel } from '@/lib/escrow-api';
+import { formatCentsToZAR, formatDate, getHoldStatusLabel } from '@/lib/escrow-api';
 import { AlertCircle, Loader2, CheckCircle } from 'lucide-react';
 
 // ============================================================================
@@ -165,19 +165,19 @@ export function HoldDetails({
           <div className="flex items-center justify-between">
             <span className="text-sm text-gray-600">{LABEL_GROSS}</span>
             <span className="font-semibold text-gray-900">
-              {formatCentsToUSD(hold.grossAmountCents)}
+              {formatCentsToZAR(hold.grossAmountCents)}
             </span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm text-gray-600">{LABEL_PLATFORM_FEE}</span>
             <span className="font-semibold text-amber-600">
-              -{formatCentsToUSD(hold.platformFeeCents)}
+              -{formatCentsToZAR(hold.platformFeeCents)}
             </span>
           </div>
           <div className="flex items-center justify-between border-t border-gray-200 pt-2">
             <span className="text-sm font-medium text-gray-900">{LABEL_HOST_AMOUNT}</span>
             <span className="text-lg font-bold text-green-600">
-              {formatCentsToUSD(hold.hostAmountCents)}
+              {formatCentsToZAR(hold.hostAmountCents)}
             </span>
           </div>
         </div>

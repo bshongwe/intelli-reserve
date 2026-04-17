@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { usePayoutHistory } from '@/hooks/useEscrow';
-import { formatCentsToUSD, formatDate, getPayoutStatusLabel } from '@/lib/escrow-api';
+import { formatCentsToZAR, formatDate, getPayoutStatusLabel } from '@/lib/escrow-api';
 import { AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 
 // ============================================================================
@@ -129,7 +129,7 @@ export function PayoutHistory({
 
               <div className="text-right">
                 <p className="font-semibold text-lg">
-                  {formatCentsToUSD(payout.amountCents)}
+                  {formatCentsToZAR(payout.amountCents)}
                 </p>
                 <p className="text-xs text-gray-600">Payout ID: {payout.id.substring(0, 8)}</p>
               </div>

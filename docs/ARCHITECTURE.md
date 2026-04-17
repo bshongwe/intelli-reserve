@@ -181,6 +181,7 @@ message Booking {
 - `CreateService(hostId, name, description, category, durationMinutes, basePrice, maxParticipants)` → Service
 - `GetService(serviceId)` → Service
 - `GetHostServices(hostId, onlyActive?, limit?, offset?)` → []Service
+- `GetBrowseableServices(limit?, offset?)` → []Service (client-facing, returns all active services)
 - `UpdateService(serviceId, fields...)` → Service
 - `DeleteService(serviceId)` → void
 - `CreateTimeSlot(serviceId, date, startTime, endTime)` → TimeSlot
@@ -334,6 +335,7 @@ message Money {
 | `/api/dashboard/metrics` | GET | Analytics Service gRPC :8091 |
 | `/api/analytics` | GET | Analytics Service gRPC :8091 |
 | `/api/services` | GET, POST | Services Service gRPC :8093 |
+| `/api/services/browse` | GET | Services Service gRPC :8093 (returns all active services for client browsing) |
 | `/api/services/:id` | PUT, PATCH, DELETE | Services Service gRPC :8093 |
 | `/api/services/bulk/delete` | POST | Services Service gRPC :8093 |
 | `/api/services/time-slots` | GET, POST | Services Service gRPC :8093 |

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRequestPayout } from '@/hooks/useEscrow';
 import { RequestPayoutSchema, getFieldErrors } from '@/schemas/escrow.schemas';
 import { AlertCircle, Loader2 } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 
 // ============================================================================
 // CONSTANTS: UI Labels & Messages
@@ -91,22 +92,24 @@ export function PayoutRequestForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900">{LABEL_REQUEST_PAYOUT}</h3>
-        <p className="mt-1 text-sm text-gray-600">
-          Available Balance: ${(availableBalanceCents / 100).toFixed(2)}
-        </p>
-      </div>
+    <Card>
+      <CardContent className="pt-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <h3 className="text-lg font-semibold">{LABEL_REQUEST_PAYOUT}</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Available Balance: R${(availableBalanceCents / 100).toFixed(2)}
+            </p>
+          </div>
 
       {/* Validation Error Alert */}
       {validationError && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+        <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-4">
           <div className="flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 flex-shrink-0 text-red-600 mt-0.5" />
+            <AlertCircle className="h-5 w-5 flex-shrink-0 text-destructive mt-0.5" />
             <div>
-              <p className="font-medium text-red-900">{MSG_VALIDATION_ERROR}</p>
-              <p className="mt-1 text-sm text-red-700">{validationError}</p>
+              <p className="font-medium text-destructive">{MSG_VALIDATION_ERROR}</p>
+              <p className="mt-1 text-sm text-destructive/80">{validationError}</p>
             </div>
           </div>
         </div>
@@ -114,12 +117,12 @@ export function PayoutRequestForm({
 
       {/* Server Error Alert */}
       {isError && error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+        <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-4">
           <div className="flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 flex-shrink-0 text-red-600 mt-0.5" />
+            <AlertCircle className="h-5 w-5 flex-shrink-0 text-destructive mt-0.5" />
             <div>
-              <p className="font-medium text-red-900">{MSG_ERROR_DEFAULT}</p>
-              <p className="mt-1 text-sm text-red-700">
+              <p className="font-medium text-destructive">{MSG_ERROR_DEFAULT}</p>
+              <p className="mt-1 text-sm text-destructive/80">
                 {error instanceof Error ? error.message : MSG_ERROR_DEFAULT}
               </p>
             </div>
@@ -132,11 +135,11 @@ export function PayoutRequestForm({
         <div className="space-y-4">
           {/* Amount Input */}
           <div>
-            <label htmlFor="amount" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="amount" className="block text-sm font-medium">
               {LABEL_AMOUNT}
             </label>
             <div className="mt-1 relative">
-              <span className="absolute left-3 top-3 text-gray-600">$</span>
+              <span className="absolute left-3 top-3 text-muted-foreground">R$</span>
               <input
                 type="number"
                 id="amount"
@@ -147,21 +150,21 @@ export function PayoutRequestForm({
                 value={amountUSD}
                 onChange={(e) => setAmountUSD(e.target.value)}
                 disabled={isPending}
-                className={`w-full rounded-lg border pl-7 pr-4 py-2 text-sm focus:outline-none focus:ring-2 disabled:bg-gray-50 disabled:text-gray-500 ${
+                className={`w-full rounded-lg border pl-7 pr-4 py-2 text-sm focus:outline-none focus:ring-2 disabled:bg-muted disabled:text-muted-foreground ${
                   fieldErrors.amountCents
-                    ? 'border-red-300 focus:ring-red-500'
-                    : 'border-gray-300 focus:ring-blue-500'
+                    ? 'border-destructive focus:ring-destructive'
+                    : 'border-input focus:ring-primary'
                 }`}
               />
             </div>
             {fieldErrors.amountCents && (
-              <p className="mt-1 text-sm text-red-600">{fieldErrors.amountCents}</p>
+              <p className="mt-1 text-sm text-destructive">{fieldErrors.amountCents}</p>
             )}
           </div>
 
           {/* Bank Account Input */}
           <div>
-            <label htmlFor="bank-account" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="bank-account" className="block text-sm font-medium">
               {LABEL_BANK_ACCOUNT}
             </label>
             <select
@@ -169,10 +172,10 @@ export function PayoutRequestForm({
               value={bankAccountToken}
               onChange={(e) => setBankAccountToken(e.target.value)}
               disabled={isPending}
-              className={`w-full rounded-lg border px-4 py-2 text-sm focus:outline-none focus:ring-2 disabled:bg-gray-50 disabled:text-gray-500 ${
+              className={`w-full rounded-lg border px-4 py-2 text-sm focus:outline-none focus:ring-2 disabled:bg-muted disabled:text-muted-foreground ${
                 fieldErrors.bankAccountToken
-                  ? 'border-red-300 focus:ring-red-500'
-                  : 'border-gray-300 focus:ring-blue-500'
+                  ? 'border-destructive focus:ring-destructive'
+                  : 'border-input focus:ring-primary'
               }`}
             >
               <option value="">{PLACEHOLDER_BANK}</option>
@@ -180,7 +183,7 @@ export function PayoutRequestForm({
               <option value="token-2">Bank of America ••••8765</option>
             </select>
             {fieldErrors.bankAccountToken && (
-              <p className="mt-1 text-sm text-red-600">{fieldErrors.bankAccountToken}</p>
+              <p className="mt-1 text-sm text-destructive">{fieldErrors.bankAccountToken}</p>
             )}
           </div>
 
@@ -188,7 +191,7 @@ export function PayoutRequestForm({
           <button
             type="submit"
             disabled={isPending || !amountUSD || !bankAccountToken}
-            className="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
+            className="w-full rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
           >
             {isPending ? (
               <>
@@ -201,16 +204,18 @@ export function PayoutRequestForm({
           </button>
         </div>
       ) : (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+        <div className="rounded-lg border border-amber-200/50 bg-amber-50/50 dark:border-amber-900/30 dark:bg-amber-950/20 p-4">
           <div className="flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 flex-shrink-0 text-amber-600 mt-0.5" />
+            <AlertCircle className="h-5 w-5 flex-shrink-0 text-amber-700 dark:text-amber-600 mt-0.5" />
             <div>
-              <p className="font-medium text-amber-900">Insufficient Balance</p>
-              <p className="mt-1 text-sm text-amber-700">{MSG_MINIMUM_BALANCE}</p>
+              <p className="font-medium text-amber-900 dark:text-amber-300">Insufficient Balance</p>
+              <p className="mt-1 text-sm text-amber-800 dark:text-amber-200">{MSG_MINIMUM_BALANCE}</p>
             </div>
           </div>
         </div>
       )}
-    </form>
+        </form>
+      </CardContent>
+    </Card>
   );
 }

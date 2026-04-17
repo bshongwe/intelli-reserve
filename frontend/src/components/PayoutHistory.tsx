@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { usePayoutHistory } from '@/hooks/useEscrow';
 import { formatCentsToZAR, formatDate, getPayoutStatusLabel } from '@/lib/escrow-api';
 import { AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 
 // ============================================================================
 // CONSTANTS: UI Labels & Messages
@@ -62,41 +63,48 @@ export function PayoutHistory({
 
   if (isLoading) {
     return (
-      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
-          <span className="text-sm text-gray-600">{MSG_LOADING}</span>
-        </div>
-      </div>
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-3">
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-muted border-t-primary" />
+            <span className="text-sm text-muted-foreground">{MSG_LOADING}</span>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   if (error) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-        <div className="flex items-start gap-3">
-          <AlertCircle className="h-5 w-5 flex-shrink-0 text-red-600 mt-0.5" />
-          <div>
-            <p className="font-medium text-red-900">{MSG_ERROR}</p>
-            <p className="mt-1 text-sm text-red-700">
-              {error instanceof Error ? error.message : MSG_ERROR}
-            </p>
+      <Card className="border-destructive/50 bg-destructive/5">
+        <CardContent className="pt-6">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 flex-shrink-0 text-destructive mt-0.5" />
+            <div>
+              <p className="font-medium text-destructive">{MSG_ERROR}</p>
+              <p className="mt-1 text-sm text-destructive/80">
+                {error instanceof Error ? error.message : MSG_ERROR}
+              </p>
+            </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     );
   }
 
   if (!payouts || payouts.length === 0) {
     return (
-      <div className="rounded-lg border border-gray-200 bg-white p-6 text-center shadow-sm">
-        <p className="text-sm text-gray-600">{MSG_NO_PAYOUTS}</p>
-      </div>
+      <Card>
+        <CardContent className="pt-6 text-center">
+          <p className="text-sm text-muted-foreground">{MSG_NO_PAYOUTS}</p>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="space-y-4 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+    <Card>
+      <CardContent className="space-y-4 pt-6">
       <div>
         <h3 className="text-lg font-semibold text-gray-900">{LABEL_TITLE}</h3>
       </div>
@@ -119,10 +127,10 @@ export function PayoutHistory({
                     {MSG_REQUESTED} {formatDate(payout.createdAt)}
                   </span>
                 </div>
-                <p className="text-xs text-gray-600">
+                <p className="text-xs text-muted-foreground">
                   {MSG_TO_ACCOUNT} {payout.bankAccountToken}
                 </p>
-                <p className="text-xs text-gray-600">
+                <p className="text-xs text-muted-foreground">
                   Status: {getPayoutStatusLabel(payout.status)}
                 </p>
               </div>
@@ -131,7 +139,7 @@ export function PayoutHistory({
                 <p className="font-semibold text-lg">
                   {formatCentsToZAR(payout.amountCents)}
                 </p>
-                <p className="text-xs text-gray-600">Payout ID: {payout.id.substring(0, 8)}</p>
+                <p className="text-xs text-muted-foreground">Payout ID: {payout.id.substring(0, 8)}</p>
               </div>
             </div>
           );
@@ -140,17 +148,17 @@ export function PayoutHistory({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between border-t border-gray-200 pt-4 mt-4">
+        <div className="flex items-center justify-between border-t border-border pt-4 mt-4">
           <button
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
             disabled={currentPage === 1}
-            className="flex items-center gap-1 rounded px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center gap-1 rounded px-3 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed transition-colors"
           >
             <ChevronLeft className="h-4 w-4" />
             Previous
           </button>
 
-          <span className="text-xs text-gray-600">
+          <span className="text-xs text-muted-foreground">
             {MSG_PAGE_OF.replace('{current}', currentPage.toString()).replace(
               '{total}',
               totalPages.toString()
@@ -160,13 +168,14 @@ export function PayoutHistory({
           <button
             onClick={() => setCurrentPage((p) => p + 1)}
             disabled={payouts.length < pageSize}
-            className="flex items-center gap-1 rounded px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center gap-1 rounded px-3 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed transition-colors"
           >
             Next
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
       )}
-    </div>
+      </CardContent>
+    </Card>
   );
 }

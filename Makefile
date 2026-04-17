@@ -1,4 +1,4 @@
-.PHONY: help dev up down build build-frontend build-bff build-backend test test-crud test-bff logs migrate seed clean install start-frontend start-bff start-backend db-setup
+.PHONY: help dev up down build build-frontend build-bff build-backend test test-crud test-bff logs migrate seed clean install start-frontend start-bff start-backend start-booking start-analytics start-inventory start-services start-notification start-identity start-escrow db-setup
 
 # Default target
 help:
@@ -33,7 +33,13 @@ help:
 	@echo "🎯 Services:"
 	@echo "  make start-frontend   - Start Next.js frontend (port 3000)"
 	@echo "  make start-bff        - Start Express BFF (port 3001)"
-	@echo "  make start-backend    - Start Go backend (port 8080)"
+	@echo "  make start-booking    - Start Booking Service (port 8090)"
+	@echo "  make start-analytics  - Start Analytics Service (port 8091)"
+	@echo "  make start-inventory  - Start Inventory Service (port 8092)"
+	@echo "  make start-services   - Start Services Service (port 8093)"
+	@echo "  make start-notification - Start Notification Service (port 8094)"
+	@echo "  make start-identity   - Start Identity Service (port 8095)"
+	@echo "  make start-escrow     - Start Escrow Service (port 8096)"
 	@echo ""
 	@echo "🧹 Maintenance:"
 	@echo "  make clean            - Clean all build artifacts"
@@ -43,17 +49,29 @@ help:
 # 🚀 QUICK START
 # ============================================================================
 
-dev: up db-setup seed install build start-frontend start-bff start-backend
+dev: up db-setup seed install build start-frontend start-bff start-booking start-analytics start-inventory start-services start-notification start-identity start-escrow
 	@echo "✅ All services started!"
-	@echo "   Frontend:  http://localhost:3000"
-	@echo "   BFF:       http://localhost:3001"
-	@echo "   Backend:   http://localhost:8080"
+	@echo "   Frontend:      http://localhost:3000"
+	@echo "   BFF:           http://localhost:3001"
+	@echo "   Booking Svc:   http://localhost:8090"
+	@echo "   Analytics Svc: http://localhost:8091"
+	@echo "   Inventory Svc: http://localhost:8092"
+	@echo "   Services Svc:  http://localhost:8093"
+	@echo "   Notification:  http://localhost:8094"
+	@echo "   Identity:      http://localhost:8095"
+	@echo "   Escrow Svc:    http://localhost:8096"
 
 install:
 	@echo "📦 Installing dependencies..."
 	cd frontend && npm install
 	cd ../bff && npm install
 	cd ../backend/booking-service && go mod download
+	cd ../backend/analytics-service && go mod download
+	cd ../backend/inventory-service && go mod download
+	cd ../backend/services-service && go mod download
+	cd ../backend/notification-service && go mod download
+	cd ../backend/identity-service && go mod download
+	cd ../backend/escrow-service && go mod download
 
 # ============================================================================
 # 🐳 DOCKER & INFRASTRUCTURE
@@ -90,6 +108,12 @@ build-bff:
 build-backend:
 	@echo "📦 Building Go backend services..."
 	cd backend/booking-service && go build -o booking-service .
+	cd ../analytics-service && go build -o analytics-service .
+	cd ../inventory-service && go build -o inventory-service .
+	cd ../services-service && go build -o services-service .
+	cd ../notification-service && go build -o notification-service .
+	cd ../identity-service && go build -o identity-service .
+	cd ../escrow-service && go build -o escrow-service .
 
 # ============================================================================
 # 🧪 TESTING
@@ -139,8 +163,42 @@ start-bff:
 	cd bff && npm run dev &
 
 start-backend:
-	@echo "🚀 Starting Go backend (port 8080)..."
+	@echo "🚀 Starting Go backend services..."
 	cd backend/booking-service && ./booking-service &
+	cd ../analytics-service && ./analytics-service &
+	cd ../inventory-service && ./inventory-service &
+	cd ../services-service && ./services-service &
+	cd ../notification-service && ./notification-service &
+	cd ../identity-service && ./identity-service &
+	cd ../escrow-service && ./escrow-service &
+
+start-booking:
+	@echo "🚀 Starting Booking Service (port 8090)..."
+	cd backend/booking-service && ./booking-service &
+
+start-analytics:
+	@echo "🚀 Starting Analytics Service (port 8091)..."
+	cd backend/analytics-service && ./analytics-service &
+
+start-inventory:
+	@echo "🚀 Starting Inventory Service (port 8092)..."
+	cd backend/inventory-service && ./inventory-service &
+
+start-services:
+	@echo "🚀 Starting Services Service (port 8093)..."
+	cd backend/services-service && ./services-service &
+
+start-notification:
+	@echo "🚀 Starting Notification Service (port 8094)..."
+	cd backend/notification-service && ./notification-service &
+
+start-identity:
+	@echo "🚀 Starting Identity Service (port 8095)..."
+	cd backend/identity-service && ./identity-service &
+
+start-escrow:
+	@echo "🚀 Starting Escrow Service (port 8096)..."
+	cd backend/escrow-service && ./escrow-service &
 
 # ============================================================================
 # 🧹 MAINTENANCE
@@ -151,4 +209,10 @@ clean:
 	cd frontend && rm -rf .next dist node_modules || true
 	cd ../bff && rm -rf dist node_modules || true
 	cd ../backend/booking-service && rm -f booking-service || true
+	cd ../backend/analytics-service && rm -f analytics-service || true
+	cd ../backend/inventory-service && rm -f inventory-service || true
+	cd ../backend/services-service && rm -f services-service || true
+	cd ../backend/notification-service && rm -f notification-service || true
+	cd ../backend/identity-service && rm -f identity-service || true
+	cd ../backend/escrow-service && rm -f escrow-service || true
 	@echo "✅ Cleanup complete"

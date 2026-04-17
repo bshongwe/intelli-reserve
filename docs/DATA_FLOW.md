@@ -849,3 +849,118 @@ stateDiagram-v2
     end note
 ```
 
+
+## 9. Escrow Payment Hold Flow
+
+```mermaid
+sequenceDiagram
+    participant User as 👤 User
+    participant FE as 📱 Frontend<br/>React
+    participant BFF as 🔗 BFF<br/>Express
+    participant ES as 🚀 Escrow Service<br/>Go
+    participant DB as 💾 PostgreSQL
+    
+    User->>FE: Complete booking
+    FE->>BFF: POST /api/escrow/holds
+    BFF->>BFF: Validate payment data
+    BFF->>ES: gRPC CreateHold()
+    ES->>ES: Generate hold UUID<br/>Calculate fees
+    ES->>DB: INSERT INTO escrow.escrow_holds
+    DB->>DB: Record hold (HELD status)
+    ES->>DB: UPDATE escrow.escrow_accounts (held_balance)
+    DB->>ES: Return hold record
+    ES->>BFF: CreateHoldResponse
+    BFF->>FE: 201 { hold_id, gross_amount, ... }
+    FE->>User: ✅ Payment secured
+```
+
+### Escrow Hold Creation Process
+```
+Client initiates booking with payment:
+├─ Booking ID: <UUID>
+├─ Host ID: <HOST_ID>
+├─ Client ID: <CLIENT_ID>
+├─ Gross Amount: 50000 cents (R$ 500.00)
+├─ Platform Fee: 5000 cents (10%)
+└─ Hold Reason: "Service booking"
+
+BFF validates:
+├─ All IDs present ✓
+├─ Amount positive ✓
+├─ Fee non-negative ✓
+└─ Pass to Escrow Service gRPC
+```
+
+### Hold Data Model
+```
+escrow.escrow_holds table:
+├─ id (UUID, PK)
+├─ host_id (UUID, FK → users)
+├─ client_id (UUID, FK → users)
+├─ booking_id (UUID, FK → bookings)
+├─ gross_amount_cents (INT, payment amount)
+├─ platform_fee_cents (INT, extracted fee)
+├─ status (VARCHAR: HELD, RELEASED, REFUNDED)
+├─ created_at (TIMESTAMP RFC3339)
+└─ released_at / refunded_at (TIMESTAMP nullable)
+
+escrow.escrow_accounts table:
+├─ host_id (UUID, PK)
+├─ available_balance_cents (INT, ready for payout)
+├─ held_balance_cents (INT, locked in active holds)
+├─ total_balance_cents (INT, available + held)
+└─ updated_at (TIMESTAMP)
+```
+
+## 10. Escrow Release & Payout Flow
+
+```mermaid
+sequenceDiagram
+    participant Host as 👤 Host
+    participant FE as 📱 Frontend<br/>React
+    participant BFF as 🔗 BFF<br/>Express
+    participant ES as 🚀 Escrow Service<br/>Go
+    participant DB as 💾 PostgreSQL
+    
+    Host->>FE: Mark service complete
+    FE->>BFF: POST /api/escrow/holds/:id/release
+    BFF->>ES: gRPC ReleaseHold()
+    ES->>DB: SELECT hold + account
+    ES->>DB: UPDATE hold status → RELEASED
+    ES->>DB: UPDATE account (held → available)
+    ES->>DB: INSERT transaction audit
+    ES->>BFF: ReleaseHoldResponse
+    BFF->>FE: 200 { available_balance, ... }
+    FE->>Host: ✅ Funds now available
+    
+    Host->>FE: Request payout
+    FE->>BFF: POST /api/escrow/payouts
+    BFF->>ES: gRPC RequestPayout()
+    ES->>DB: Verify available balance
+    ES->>DB: INSERT payout (PENDING)
+    ES->>DB: Deduct from available_balance
+    ES->>DB: INSERT transaction audit
+    ES->>BFF: RequestPayoutResponse
+    BFF->>FE: 201 { payout_id, status }
+    FE->>Host: ✅ Payout processing
+```
+
+### Payout Processing States
+```
+State transitions:
+PENDING → PROCESSING → COMPLETED
+            ↓
+          FAILED → PENDING (retry)
+
+On ReleaseHold:
+- held_balance: 50000 → 0
+- available_balance: 100000 → 150000
+- Transaction recorded: HOLD_RELEASED
+
+On RequestPayout:
+- available_balance: 150000 → 100000
+- payout.status: PENDING
+- Transaction recorded: PAYOUT_REQUESTED
+- Payout can transition to COMPLETED when processed
+```
+

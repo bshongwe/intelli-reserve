@@ -20,6 +20,7 @@ graph TB
         IS["Inventory Service<br/>Go + gRPC<br/>Port: 8092<br/>- Time Slot Occupancy<br/>- Availability<br/>- Capacity Tracking"]
         SS["Services Service<br/>Go + gRPC<br/>Port: 8093<br/>- Service CRUD<br/>- Time Slot Management<br/>- Host Service Listings"]
         NS["Notification Service<br/>Go + gRPC<br/>Port: 8094<br/>- Email<br/>- SMS<br/>- Push Notifications"]
+        ES["Escrow Service<br/>Go + gRPC<br/>Port: 8096<br/>- Payment Holds<br/>- Fund Release<br/>- Payout Requests"]
     end
     
     subgraph Data["💾 Data Persistence Layer"]
@@ -32,11 +33,13 @@ graph TB
     BFFE -->|gRPC| IS
     BFFE -->|gRPC| SS
     BFFE -->|gRPC| NS
+    BFFE -->|gRPC| ES
     BS -->|SQL| DB
     AS -->|SQL| DB
     IS -->|SQL| DB
     SS -->|SQL| DB
     NS -->|SQL| DB
+    ES -->|SQL| DB
     
     style Client fill:#e1f5ff
     style BFF fill:#f3e5f5
@@ -94,7 +97,7 @@ graph TB
 | Services Service | 8083 | 8093 | ✅ Live |
 | Notification Service | 8084 | 8094 | ✅ Live |
 | Identity Service | 8085 | 8095 | ✅ Live |
-| Escrow Service | 8086 | 8096 | 🔲 Planned |
+| Escrow Service | 8086 | 8096 | ✅ Live |
 | Payout Service | 8087 | 8097 | 🔲 Planned |
 | Pricing Service | 8088 | 8098 | 🔲 Planned |
 
@@ -229,7 +232,98 @@ message NotificationPreferences {
 - `notifications` - Stores notification history (id, recipient_email, notification_type, subject, body, channel, status, booking_id, host_id, sent_at, failed_at, created_at, updated_at)
 - `notification_preferences` - User notification preferences (user_id, email_*, sms_*, push_*, timestamps)
 
-## BFF Route → Service Mapping
+### Escrow Service
+**Responsibility**: Manage payment holds, fund releases, and payout requests for secure transactions
+
+**Core Methods**:
+- `GetEscrowAccount(hostId)` → EscrowAccount
+- `CreateHold(bookingId, hostId, clientId, grossAmountCents)` → Hold
+- `GetHold(holdId)` → Hold
+- `ReleaseHold(holdId)` → Hold (Release funds to available balance)
+- `RefundHold(holdId, reason)` → Hold (Return funds to client)
+- `GetAvailableBalance(hostId)` → Money
+- `RequestPayout(hostId, amountCents, bankAccountToken)` → Payout
+- `GetPayoutHistory(hostId, limit, offset)` → []Payout
+- `GetTransactionHistory(hostId, limit, offset)` → []Transaction
+- `ConfirmPayout(payoutId)` → Payout
+- `RejectPayout(payoutId, reason)` → Payout
+- `HandleDisputeRequest(holdId, reason)` → Dispute
+
+**Data Models**:
+```protobuf
+message EscrowAccount {
+  string id = 1;
+  string host_id = 2;
+  Money held_balance = 3;           // Locked in active holds
+  Money available_balance = 4;      // Ready for payout
+  Money total_received = 5;         // Lifetime total received
+  Money total_paid_out = 6;         // Lifetime total paid out
+  string account_status = 7;        // active, suspended, closed
+  string created_at = 8;
+  string updated_at = 9;
+}
+
+message Hold {
+  string id = 1;
+  string booking_id = 2;
+  string host_id = 3;
+  string client_id = 4;
+  string status = 5;                // pending, released, refunded
+  Money gross_amount = 6;
+  Money platform_fee = 7;
+  Money host_amount = 8;
+  string hold_reason = 9;
+  string created_at = 10;
+  string updated_at = 11;
+}
+
+message Payout {
+  string id = 1;
+  string host_id = 2;
+  Money amount = 3;
+  string status = 4;                // pending, processing, completed, failed
+  string bank_account_token = 5;
+  string created_at = 6;
+  string updated_at = 7;
+}
+
+message Transaction {
+  string id = 1;
+  string host_id = 2;
+  string transaction_type = 3;      // hold_created, hold_released, payout_requested, etc.
+  Money amount = 4;
+  Money balance_before = 5;
+  Money balance_after = 6;
+  string reason = 7;
+  string related_hold_id = 8;
+  string related_payout_id = 9;
+  string created_at = 10;
+}
+
+message Money {
+  int64 amount_cents = 1;
+  string currency = 2;              // e.g., "ZAR"
+}
+```
+
+**Currency**: All amounts use South African Rand (ZAR) stored as cents in the database
+
+**Database Tables**:
+- `escrow_accounts` - Host escrow balances (id, host_id, held_balance_cents, available_balance_cents, total_received_cents, total_paid_out_cents, account_status, timestamps)
+- `holds` - Payment holds (id, booking_id, host_id, client_id, status, gross_amount_cents, platform_fee_cents, host_amount_cents, hold_reason, timestamps)
+- `payouts` - Payout requests (id, host_id, amount_cents, status, bank_account_token, timestamps)
+- `transactions` - Audit log (id, host_id, transaction_type, amount_cents, balance_before_cents, balance_after_cents, reason, hold_id, payout_id, created_at)
+
+**Indexes**:
+- `(host_id, account_status)` - Fast account lookups
+- `(booking_id)` - Find holds by booking
+- `(host_id, status)` on both holds and payouts - Status filtering by host
+- `(created_at DESC)` on transactions - Timeline queries
+- 27 total indexes covering all query patterns
+
+**Connection Management**: Uses pgxpool.Pool (25 max connections, 5 min connections) to handle concurrent requests without "conn busy" errors
+
+
 
 | BFF Route | Method(s) | Backend |
 |-----------|-----------|---------|
@@ -254,6 +348,18 @@ message NotificationPreferences {
 | `/api/notifications/reminder` | POST | Notification Service gRPC :8094 |
 | `/api/notifications/payout` | POST | Notification Service gRPC :8094 |
 | `/api/notifications/preferences` | GET, PUT | Notification Service gRPC :8094 |
+| `/api/escrow/account` | GET | Escrow Service gRPC :8096 |
+| `/api/escrow/holds` | GET, POST | Escrow Service gRPC :8096 |
+| `/api/escrow/holds/:id` | GET | Escrow Service gRPC :8096 |
+| `/api/escrow/holds/:id/release` | POST | Escrow Service gRPC :8096 |
+| `/api/escrow/holds/:id/refund` | POST | Escrow Service gRPC :8096 |
+| `/api/escrow/balance` | GET | Escrow Service gRPC :8096 |
+| `/api/escrow/payouts` | GET, POST | Escrow Service gRPC :8096 |
+| `/api/escrow/payouts/:id` | GET | Escrow Service gRPC :8096 |
+| `/api/escrow/payouts/:id/confirm` | POST | Escrow Service gRPC :8096 |
+| `/api/escrow/payouts/:id/reject` | POST | Escrow Service gRPC :8096 |
+| `/api/escrow/transactions` | GET | Escrow Service gRPC :8096 |
+| `/api/escrow/disputes` | GET, POST | Escrow Service gRPC :8096 |
 | `/api/auth/*` | * | Direct DB (identity service planned) |
 | `/api/users/*` | * | Direct DB (identity service planned) |
 
@@ -345,6 +451,61 @@ This ensures type compatibility across all layers.
    ├─ Booking no longer in pending list
    ├─ Appears in confirmed/cancelled list
    └─ Dashboard KPIs updated
+```
+
+## Data Flow for Escrow Payment Hold Lifecycle
+
+```
+1. BOOKING CONFIRMED
+   ├─ Host confirms a booking
+   ├─ Booking status = "confirmed"
+   └─ Escrow Service automatically creates a hold
+
+2. HOLD CREATED
+   ├─ Payment amount calculated: gross = base price + platform fee
+   ├─ Hold record created with status="pending"
+   ├─ Held balance increases: available_balance - hold_amount
+   ├─ Transaction logged: "hold_created"
+   └─ Client sees hold notification (optional)
+
+3. BOOKING EXECUTION
+   ├─ Service date arrives
+   ├─ Host completes the booking
+   └─ Host marks booking complete (future feature)
+
+4. HOLD RELEASE (Manual or Auto-triggered)
+   ├─ Host requests fund release via Escrow Dashboard
+   ├─ BFF validates: booking completed, hold status = pending
+   ├─ ReleaseHold() called on Escrow Service
+   ├─ Hold status updated to "released"
+   ├─ Funds moved: held_balance → available_balance
+   ├─ Platform fee deducted from host amount
+   ├─ Transaction logged: "hold_released"
+   └─ Notification sent to host
+
+5. PAYOUT REQUEST
+   ├─ Host clicks "Request Payout" on Escrow Dashboard
+   ├─ Host specifies amount (≤ available_balance)
+   ├─ Payout request created with status="pending"
+   ├─ Available balance reduced by payout amount
+   ├─ Transaction logged: "payout_requested"
+   └─ Host sees payout in history with "pending" status
+
+6. PAYOUT PROCESSING (Future: Payout Service)
+   ├─ Payout Service picks up request
+   ├─ Initiates bank transfer
+   ├─ Updates status to "processing" → "completed"
+   ├─ Transaction logged: "payout_completed"
+   ├─ Email confirmation sent to host
+   └─ Funds reflected in host's bank account (2-3 business days)
+
+7. REFUND SCENARIO (If booking cancelled before release)
+   ├─ Booking cancelled by host before completion
+   ├─ RefundHold() called on Escrow Service
+   ├─ Hold status updated to "refunded"
+   ├─ Funds moved: held_balance → available_balance (NOT host's)
+   ├─ Client initiates refund withdrawal (future)
+   └─ Transaction logged: "hold_refunded"
 ```
 
 ## Caching Strategy
@@ -494,20 +655,21 @@ graph TB
 ## Current State & Roadmap
 
 ### Live Services
-- ✅ Booking Service — full CRUD, status lifecycle
-- ✅ Analytics Service — live metrics, revenue, occupancy, booking stats
-- ✅ Inventory Service — time slot occupancy, availability, capacity tracking
-- ✅ Services Service — service CRUD, time slot definition management
-- ✅ Notification Service — email confirmations, cancellations, reminders, payouts, user preferences
-- ✅ Identity Service — user registration, login, JWT tokens, session management, password management
-- ✅ Host Dashboard — pending bookings, metrics, revenue charts
-- ✅ Analytics Dashboard — revenue trends, top services, customer stats
-- ✅ My Services page — create, edit, delete, bulk actions
-- ✅ Booking creation flow — client-facing booking page
+- ✅ **Booking Service** — full CRUD, status lifecycle
+- ✅ **Analytics Service** — live metrics, revenue, occupancy, booking stats
+- ✅ **Inventory Service** — time slot occupancy, availability, capacity tracking
+- ✅ **Services Service** — service CRUD, time slot definition management
+- ✅ **Notification Service** — email confirmations, cancellations, reminders, payouts, user preferences
+- ✅ **Identity Service** — user registration, login, JWT tokens, session management, password management
+- ✅ **Escrow Service** — payment holds, fund release, payout requests, transaction audit log
+- ✅ **Host Dashboard** — pending bookings, metrics, revenue charts, escrow balance display
+- ✅ **Host Escrow Dashboard** — balance overview, payout history, transaction history, fund requests
+- ✅ **Analytics Dashboard** — revenue trends, top services, customer stats
+- ✅ **My Services page** — create, edit, delete, bulk actions
+- ✅ **Booking creation flow** — client-facing booking page
 
 ### To Implement
-- [ ] Escrow Service (Port 8096) — payment holding and release
-- [ ] Payout Service (Port 8097) — host payout processing
+- [ ] Payout Service (Port 8097) — bank transfer processing and settlement
 - [ ] Pricing Service (Port 8098) — dynamic pricing rules
 - [ ] Booking reschedule functionality
 - [ ] Customer reviews & ratings

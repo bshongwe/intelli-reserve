@@ -9,6 +9,9 @@ import { analyticsAPI, bookingsAPI } from "@/lib/api";
 import { DashboardLoadingSkeleton } from "@/components/common/DashboardLoadingSkeleton";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/lib/auth-context";
+import Link from "next/link";
+import { PayoutHistory } from "@/components/PayoutHistory";
+import { EscrowBalance } from "@/components/EscrowBalance";
 
 export default function HostDashboard() {
   const { toast } = useToast();
@@ -136,6 +139,22 @@ export default function HostDashboard() {
         </Card>
       </div>
 
+      {/* Escrow Balance Section */}
+      <section className="space-y-2">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">Escrow Account</h2>
+          <p className="text-sm text-gray-600">Your escrow balance and payment information</p>
+        </div>
+        <EscrowBalance hostId={hostId} />
+        <div className="flex justify-end">
+          <Link href="/dashboard/host/escrow">
+            <Button variant="outline" size="sm">
+              View Full Escrow Dashboard →
+            </Button>
+          </Link>
+        </div>
+      </section>
+
       <div className="grid gap-6 lg:grid-cols-7">
         {/* Revenue Trend */}
         <Card className="lg:col-span-4 overflow-hidden">
@@ -257,15 +276,15 @@ export default function HostDashboard() {
                 <CardTitle className="text-base sm:text-lg">Recent Escrow Releases</CardTitle>
                 <CardDescription className="text-xs sm:text-sm">Funds released to you</CardDescription>
               </div>
-              <Button variant="outline" size="sm" className="text-xs sm:text-sm w-full sm:w-auto">View All</Button>
+              <Link href="/dashboard/host/escrow">
+                <Button variant="outline" size="sm" className="text-xs sm:text-sm w-full sm:w-auto">
+                  View All
+                </Button>
+              </Link>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3 sm:space-y-4">
-              <div className="text-center py-8 text-muted-foreground">
-                <p className="text-sm">Escrow data coming soon from API</p>
-              </div>
-            </div>
+            <PayoutHistory hostId={hostId} pageSize={3} />
           </CardContent>
         </Card>
       </div>

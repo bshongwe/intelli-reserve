@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	pb "github.com/intelli-reserve/backend/gen/go/escrow"
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -62,11 +62,11 @@ const (
 // EscrowServiceServer implements the EscrowService gRPC service
 type EscrowServiceServer struct {
 	pb.UnimplementedEscrowServiceServer
-	db *pgx.Conn
+	db *pgxpool.Pool
 }
 
 // NewEscrowServiceServer creates a new EscrowServiceServer
-func NewEscrowServiceServer(db *pgx.Conn) *EscrowServiceServer {
+func NewEscrowServiceServer(db *pgxpool.Pool) *EscrowServiceServer {
 	return &EscrowServiceServer{db: db}
 }
 
@@ -110,7 +110,14 @@ func (s *EscrowServiceServer) getEscrowAccount(ctx context.Context, hostID strin
 		FROM escrow.escrow_accounts WHERE host_id = $1
 	`
 
-	var account pb.EscrowAccount
+	// Initialize Money structs to avoid nil pointer dereference
+	account := &pb.EscrowAccount{
+		HeldBalance:      &pb.Money{},
+		AvailableBalance: &pb.Money{},
+		TotalReceived:    &pb.Money{},
+		TotalPaidOut:     &pb.Money{},
+	}
+
 	var createdAtTime, updatedAtTime time.Time
 	var lastReconciledPtr *time.Time
 
@@ -125,17 +132,17 @@ func (s *EscrowServiceServer) getEscrowAccount(ctx context.Context, hostID strin
 		return nil, err
 	}
 
-	account.HeldBalance.Currency = "USD"
-	account.AvailableBalance.Currency = "USD"
-	account.TotalReceived.Currency = "USD"
-	account.TotalPaidOut.Currency = "USD"
+	account.HeldBalance.Currency = "ZAR"
+	account.AvailableBalance.Currency = "ZAR"
+	account.TotalReceived.Currency = "ZAR"
+	account.TotalPaidOut.Currency = "ZAR"
 	account.CreatedAt = createdAtTime.Format(time.RFC3339)
 	account.UpdatedAt = updatedAtTime.Format(time.RFC3339)
 	if lastReconciledPtr != nil {
 		account.LastReconciledAt = lastReconciledPtr.Format(time.RFC3339)
 	}
 
-	return &account, nil
+	return account, nil
 }
 
 // updateHeldBalance adds or subtracts from held_balance
@@ -250,6 +257,10 @@ func (s *EscrowServiceServer) CreateHold(ctx context.Context, req *pb.CreateHold
 	`
 
 	var hold pb.EscrowHold
+	// Initialize Money structs to avoid nil pointer dereference
+	hold.GrossAmount = &pb.Money{}
+	hold.PlatformFee = &pb.Money{}
+	hold.HostAmount = &pb.Money{}
 	var createdAtTime, updatedAtTime time.Time
 
 	err = s.db.QueryRow(ctx, query,
@@ -280,9 +291,9 @@ func (s *EscrowServiceServer) CreateHold(ctx context.Context, req *pb.CreateHold
 
 	hold.CreatedAt = createdAtTime.Format(time.RFC3339)
 	hold.UpdatedAt = updatedAtTime.Format(time.RFC3339)
-	hold.GrossAmount.Currency = "USD"
-	hold.PlatformFee.Currency = "USD"
-	hold.HostAmount.Currency = "USD"
+	hold.GrossAmount.Currency = "ZAR"
+	hold.PlatformFee.Currency = "ZAR"
+	hold.HostAmount.Currency = "ZAR"
 
 	log.Printf(logHoldCreated, holdID)
 
@@ -312,6 +323,10 @@ func (s *EscrowServiceServer) GetHold(ctx context.Context, req *pb.GetHoldReques
 	`
 
 	var hold pb.EscrowHold
+	// Initialize Money structs to avoid nil pointer dereference
+	hold.GrossAmount = &pb.Money{}
+	hold.PlatformFee = &pb.Money{}
+	hold.HostAmount = &pb.Money{}
 	var createdAtTime, updatedAtTime time.Time
 	var releasedAt, refundedAt *time.Time
 
@@ -336,9 +351,9 @@ func (s *EscrowServiceServer) GetHold(ctx context.Context, req *pb.GetHoldReques
 	if refundedAt != nil {
 		hold.RefundedAt = refundedAt.Format(time.RFC3339)
 	}
-	hold.GrossAmount.Currency = "USD"
-	hold.PlatformFee.Currency = "USD"
-	hold.HostAmount.Currency = "USD"
+	hold.GrossAmount.Currency = "ZAR"
+	hold.PlatformFee.Currency = "ZAR"
+	hold.HostAmount.Currency = "ZAR"
 
 	return &pb.GetHoldResponse{
 		Success: true,
@@ -369,6 +384,10 @@ func (s *EscrowServiceServer) ReleaseHold(ctx context.Context, req *pb.ReleaseHo
 	`
 
 	var hold pb.EscrowHold
+	// Initialize Money structs to avoid nil pointer dereference
+	hold.GrossAmount = &pb.Money{}
+	hold.PlatformFee = &pb.Money{}
+	hold.HostAmount = &pb.Money{}
 	var hostAmount int64
 	var createdAtTime, updatedAtTime time.Time
 	var releasedAt *time.Time
@@ -426,9 +445,9 @@ func (s *EscrowServiceServer) ReleaseHold(ctx context.Context, req *pb.ReleaseHo
 	hold.CreatedAt = createdAtTime.Format(time.RFC3339)
 	hold.UpdatedAt = updatedAtTime.Format(time.RFC3339)
 	hold.ReleasedAt = releasedAtTime.Format(time.RFC3339)
-	hold.GrossAmount.Currency = "USD"
-	hold.PlatformFee.Currency = "USD"
-	hold.HostAmount.Currency = "USD"
+	hold.GrossAmount.Currency = "ZAR"
+	hold.PlatformFee.Currency = "ZAR"
+	hold.HostAmount.Currency = "ZAR"
 
 	log.Printf(logHoldReleased, req.HoldId)
 
@@ -463,6 +482,10 @@ func (s *EscrowServiceServer) RefundHold(ctx context.Context, req *pb.RefundHold
 	`
 
 	var hold pb.EscrowHold
+	// Initialize Money structs to avoid nil pointer dereference
+	hold.GrossAmount = &pb.Money{}
+	hold.PlatformFee = &pb.Money{}
+	hold.HostAmount = &pb.Money{}
 	var createdAtTime, updatedAtTime, refundedAtTime time.Time
 
 	err := s.db.QueryRow(ctx, query, now, req.Reason, now, req.HoldId).Scan(
@@ -485,9 +508,9 @@ func (s *EscrowServiceServer) RefundHold(ctx context.Context, req *pb.RefundHold
 	hold.CreatedAt = createdAtTime.Format(time.RFC3339)
 	hold.UpdatedAt = updatedAtTime.Format(time.RFC3339)
 	hold.RefundedAt = refundedAtTime.Format(time.RFC3339)
-	hold.GrossAmount.Currency = "USD"
-	hold.PlatformFee.Currency = "USD"
-	hold.HostAmount.Currency = "USD"
+	hold.GrossAmount.Currency = "ZAR"
+	hold.PlatformFee.Currency = "ZAR"
+	hold.HostAmount.Currency = "ZAR"
 
 	log.Printf(logHoldRefunded, req.HoldId)
 
@@ -508,6 +531,15 @@ func (s *EscrowServiceServer) GetEscrowAccount(ctx context.Context, req *pb.GetE
 			Success:      false,
 			ErrorMessage: errMissingRequired,
 		}, status.Error(codes.InvalidArgument, errMissingRequired)
+	}
+
+	// Ensure account exists (create if needed)
+	_, err := s.ensureEscrowAccount(ctx, req.HostId)
+	if err != nil {
+		return &pb.GetEscrowAccountResponse{
+			Success:      false,
+			ErrorMessage: errDatabaseFailure,
+		}, status.Error(codes.Internal, errDatabaseFailure)
 	}
 
 	account, err := s.getEscrowAccount(ctx, req.HostId)
@@ -551,7 +583,7 @@ func (s *EscrowServiceServer) GetAvailableBalance(ctx context.Context, req *pb.G
 		Success: true,
 		AvailableBalance: &pb.Money{
 			AmountCents: balance,
-			Currency:    "USD",
+			Currency:    "ZAR",
 		},
 	}, nil
 }
@@ -617,7 +649,7 @@ func (s *EscrowServiceServer) RequestPayout(ctx context.Context, req *pb.Request
 	updateQuery := "UPDATE escrow.escrow_accounts SET available_balance = available_balance - $1 WHERE host_id = $2"
 	s.db.Exec(ctx, updateQuery, req.AmountCents, req.HostId)
 
-	payout.Amount.Currency = "USD"
+	payout.Amount.Currency = "ZAR"
 	payout.CreatedAt = createdAtTime.Format(time.RFC3339)
 	payout.RequestedAt = requestedAtTime.Format(time.RFC3339)
 
@@ -665,7 +697,7 @@ func (s *EscrowServiceServer) GetPayoutStatus(ctx context.Context, req *pb.GetPa
 		}, status.Error(codes.NotFound, errPayoutNotFound)
 	}
 
-	payout.Amount.Currency = "USD"
+	payout.Amount.Currency = "ZAR"
 	payout.CreatedAt = createdAtTime.Format(time.RFC3339)
 	payout.RequestedAt = requestedAtTime.Format(time.RFC3339)
 	if processingStartedAtPtr != nil {
@@ -697,7 +729,10 @@ func (s *EscrowServiceServer) GetPayoutHistory(ctx context.Context, req *pb.GetP
 	// Get total count
 	countQuery := "SELECT COUNT(*) FROM escrow.payouts WHERE host_id = $1"
 	var totalCount int32
-	s.db.QueryRow(ctx, countQuery, req.HostId).Scan(&totalCount)
+	err := s.db.QueryRow(ctx, countQuery, req.HostId).Scan(&totalCount)
+	if err != nil {
+		log.Printf("❌ Error counting payouts: %v", err)
+	}
 
 	// Get paginated results
 	query := `
@@ -710,6 +745,7 @@ func (s *EscrowServiceServer) GetPayoutHistory(ctx context.Context, req *pb.GetP
 
 	rows, err := s.db.Query(ctx, query, req.HostId, req.Limit, req.Offset)
 	if err != nil {
+		log.Printf("❌ Database error in GetPayoutHistory: %v", err)
 		return &pb.GetPayoutHistoryResponse{
 			Success:      false,
 			ErrorMessage: errDatabaseFailure,
@@ -721,6 +757,8 @@ func (s *EscrowServiceServer) GetPayoutHistory(ctx context.Context, req *pb.GetP
 
 	for rows.Next() {
 		var payout pb.Payout
+		// Initialize Money struct to avoid nil pointer dereference
+		payout.Amount = &pb.Money{}
 		var createdAtTime, requestedAtTime time.Time
 		var processingStartedAtPtr, completedAtPtr *time.Time
 
@@ -730,10 +768,11 @@ func (s *EscrowServiceServer) GetPayoutHistory(ctx context.Context, req *pb.GetP
 			&requestedAtTime, &processingStartedAtPtr, &completedAtPtr, &createdAtTime,
 		)
 		if err != nil {
+			log.Printf("❌ Error scanning payout row: %v", err)
 			continue
 		}
 
-		payout.Amount.Currency = "USD"
+		payout.Amount.Currency = "ZAR"
 		payout.CreatedAt = createdAtTime.Format(time.RFC3339)
 		payout.RequestedAt = requestedAtTime.Format(time.RFC3339)
 		if processingStartedAtPtr != nil {
@@ -744,6 +783,15 @@ func (s *EscrowServiceServer) GetPayoutHistory(ctx context.Context, req *pb.GetP
 		}
 
 		payouts = append(payouts, &payout)
+	}
+
+	// Check for errors from iterating over rows
+	if err := rows.Err(); err != nil {
+		log.Printf("❌ Error iterating rows in GetPayoutHistory: %v", err)
+		return &pb.GetPayoutHistoryResponse{
+			Success:      false,
+			ErrorMessage: errDatabaseFailure,
+		}, status.Error(codes.Internal, errDatabaseFailure)
 	}
 
 	return &pb.GetPayoutHistoryResponse{
@@ -797,6 +845,10 @@ func (s *EscrowServiceServer) GetTransactionHistory(ctx context.Context, req *pb
 
 	for rows.Next() {
 		var txn pb.EscrowTransaction
+		// Initialize Money structs to avoid nil pointer dereference
+		txn.Amount = &pb.Money{}
+		txn.BalanceBefore = &pb.Money{}
+		txn.BalanceAfter = &pb.Money{}
 		var createdAtTime time.Time
 
 		err := rows.Scan(
@@ -807,9 +859,9 @@ func (s *EscrowServiceServer) GetTransactionHistory(ctx context.Context, req *pb
 			continue
 		}
 
-		txn.Amount.Currency = "USD"
-		txn.BalanceBefore.Currency = "USD"
-		txn.BalanceAfter.Currency = "USD"
+		txn.Amount.Currency = "ZAR"
+		txn.BalanceBefore.Currency = "ZAR"
+		txn.BalanceAfter.Currency = "ZAR"
 		txn.CreatedAt = createdAtTime.Format(time.RFC3339)
 
 		transactions = append(transactions, &txn)

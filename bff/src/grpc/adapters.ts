@@ -11,6 +11,7 @@ import {
   inventoryService,
   notificationService,
   identityService,
+  escrowService,
 } from './client';
 
 /**
@@ -323,6 +324,101 @@ export const InventoryServiceAdapter = {
     return await inventoryService.getCapacityStatus({
       service_id: serviceId,
       date,
+    });
+  },
+};
+
+/**
+ * ESCROW SERVICE ADAPTERS
+ */
+
+export const EscrowServiceAdapter = {
+  async createHold(bookingId: string, hostId: string, clientId: string, grossAmountCents: number, platformFeeCents: number, holdReason: string = 'booking_payment') {
+    return await escrowService.createHold({
+      booking_id: bookingId,
+      host_id: hostId,
+      client_id: clientId,
+      gross_amount_cents: grossAmountCents,
+      platform_fee_cents: platformFeeCents,
+      hold_reason: holdReason,
+    });
+  },
+
+  async getHold(holdId: string) {
+    return await escrowService.getHold({
+      hold_id: holdId,
+    });
+  },
+
+  async releaseHold(holdId: string, hostId: string) {
+    return await escrowService.releaseHold({
+      hold_id: holdId,
+      host_id: hostId,
+    });
+  },
+
+  async refundHold(holdId: string, hostId: string, reason: string = '') {
+    return await escrowService.refundHold({
+      hold_id: holdId,
+      host_id: hostId,
+      reason,
+    });
+  },
+
+  async getEscrowAccount(hostId: string) {
+    return await escrowService.getEscrowAccount({
+      host_id: hostId,
+    });
+  },
+
+  async getAvailableBalance(hostId: string) {
+    return await escrowService.getAvailableBalance({
+      host_id: hostId,
+    });
+  },
+
+  async requestPayout(hostId: string, amountCents: number, bankAccountToken: string) {
+    return await escrowService.requestPayout({
+      host_id: hostId,
+      amount_cents: amountCents,
+      bank_account_token: bankAccountToken,
+    });
+  },
+
+  async getPayoutStatus(payoutId: string) {
+    return await escrowService.getPayoutStatus({
+      payout_id: payoutId,
+    });
+  },
+
+  async getPayoutHistory(hostId: string, limit: number = 50, offset: number = 0) {
+    return await escrowService.getPayoutHistory({
+      host_id: hostId,
+      limit,
+      offset,
+    });
+  },
+
+  async getTransactionHistory(hostId: string, limit: number = 50, offset: number = 0) {
+    return await escrowService.getTransactionHistory({
+      host_id: hostId,
+      limit,
+      offset,
+    });
+  },
+
+  async openDispute(bookingId: string, holdId: string, initiatedByUserId: string, reason: string) {
+    return await escrowService.openDispute({
+      booking_id: bookingId,
+      hold_id: holdId,
+      initiated_by_user_id: initiatedByUserId,
+      reason,
+    });
+  },
+
+  async getDisputeStatus(disputeId: string) {
+    return await escrowService.getDisputeStatus({
+      dispute_id: disputeId,
     });
   },
 };

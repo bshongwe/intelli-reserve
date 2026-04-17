@@ -12,7 +12,7 @@ import (
 	"syscall"
 
 	pb "github.com/intelli-reserve/backend/gen/go/escrow"
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/grpc"
 )
 
@@ -53,12 +53,21 @@ func main() {
 	// Build connection string
 	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", dbUser, dbPassword, dbHost, dbPort, dbName)
 
-	// Connect to database
-	conn, err := pgx.Connect(context.Background(), connStr)
+	// Create connection pool
+	poolConfig, err := pgxpool.ParseConfig(connStr)
 	if err != nil {
-		log.Fatalf("Unable to connect to database: %v", err)
+		log.Fatalf("Unable to parse connection config: %v", err)
 	}
-	defer conn.Close(context.Background())
+
+	// Set connection pool size
+	poolConfig.MaxConns = 25
+	poolConfig.MinConns = 5
+
+	conn, err := pgxpool.NewWithConfig(context.Background(), poolConfig)
+	if err != nil {
+		log.Fatalf("Unable to create connection pool: %v", err)
+	}
+	defer conn.Close()
 
 	log.Printf("✅ Escrow Service connected to PostgreSQL DB")
 
@@ -98,14 +107,14 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // startGRPCServer starts the gRPC server
-func startGRPCServer(conn *pgx.Conn) {
+func startGRPCServer(pool *pgxpool.Pool) {
 	listener, err := net.Listen("tcp", grpcPort)
 	if err != nil {
 		log.Fatalf("Failed to listen for gRPC: %v", err)
 	}
 
 	s := grpc.NewServer()
-	pb.RegisterEscrowServiceServer(s, NewEscrowServiceServer(conn))
+	pb.RegisterEscrowServiceServer(s, NewEscrowServiceServer(pool))
 
 	log.Printf("🚀 Escrow Service gRPC server running on %s", grpcPort)
 	if err := s.Serve(listener); err != nil {

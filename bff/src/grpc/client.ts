@@ -14,6 +14,7 @@ const INVENTORY_URL = process.env.INVENTORY_GRPC_URL || 'localhost:8092';
 const SERVICES_URL = process.env.SERVICES_GRPC_URL || 'localhost:8093';
 const NOTIFICATION_URL = process.env.NOTIFICATION_GRPC_URL || 'localhost:8094';
 const IDENTITY_URL = process.env.IDENTITY_GRPC_URL || 'localhost:8095';
+const ESCROW_URL = process.env.ESCROW_GRPC_URL || 'localhost:8096';
 
 // Package definitions
 let bookingPackageDef: any;
@@ -22,6 +23,7 @@ let servicesPackageDef: any;
 let inventoryPackageDef: any;
 let notificationPackageDef: any;
 let identityPackageDef: any;
+let escrowPackageDef: any;
 
 // gRPC clients
 let bookingClient: any;
@@ -30,6 +32,7 @@ let servicesClient: any;
 let inventoryClient: any;
 let notificationClient: any;
 let identityClient: any;
+let escrowClient: any;
 
 /**
  * Initialize all gRPC clients
@@ -91,6 +94,15 @@ export async function initializeGRPCClients(): Promise<void> {
       includeDirs: [PROTO_PATH],
     });
 
+    escrowPackageDef = protoLoader.loadSync(path.join(PROTO_PATH, 'escrow.proto'), {
+      keepCase: true,
+      longs: String,
+      enums: String,
+      defaults: true,
+      oneofs: true,
+      includeDirs: [PROTO_PATH],
+    });
+
     // Get gRPC service descriptors
     const bookingGrpcObj = grpc.loadPackageDefinition(bookingPackageDef) as any;
     const analyticsGrpcObj = grpc.loadPackageDefinition(analyticsPackageDef) as any;
@@ -98,6 +110,7 @@ export async function initializeGRPCClients(): Promise<void> {
     const inventoryGrpcObj = grpc.loadPackageDefinition(inventoryPackageDef) as any;
     const notificationGrpcObj = grpc.loadPackageDefinition(notificationPackageDef) as any;
     const identityGrpcObj = grpc.loadPackageDefinition(identityPackageDef) as any;
+    const escrowGrpcObj = grpc.loadPackageDefinition(escrowPackageDef) as any;
 
     // Create clients
     const BookingService = bookingGrpcObj.intelli_reserve.booking.BookingService;
@@ -106,6 +119,7 @@ export async function initializeGRPCClients(): Promise<void> {
     const InventoryService = inventoryGrpcObj.intelli_reserve.inventory.InventoryService;
     const NotificationService = notificationGrpcObj.intelli_reserve.notification.NotificationService;
     const IdentityService = identityGrpcObj.intelli_reserve.identity.IdentityService;
+    const EscrowService = escrowGrpcObj.intelli_reserve.escrow.EscrowService;
 
     bookingClient = new BookingService(BACKEND_URL, grpc.credentials.createInsecure());
     analyticsClient = new AnalyticsService(ANALYTICS_URL, grpc.credentials.createInsecure());
@@ -113,6 +127,7 @@ export async function initializeGRPCClients(): Promise<void> {
     inventoryClient = new InventoryService(INVENTORY_URL, grpc.credentials.createInsecure());
     notificationClient = new NotificationService(NOTIFICATION_URL, grpc.credentials.createInsecure());
     identityClient = new IdentityService(IDENTITY_URL, grpc.credentials.createInsecure());
+    escrowClient = new EscrowService(ESCROW_URL, grpc.credentials.createInsecure());
 
     console.log('✅ gRPC clients initialized successfully');
   } catch (error) {
@@ -360,6 +375,72 @@ export const notificationService = {
   },
 };
 
+/**
+ * ESCROW SERVICE METHODS
+ */
+
+export const escrowService = {
+  createHold: async (request: any) => {
+    const method = promisifyGRPCMethod(escrowClient, 'CreateHold');
+    return method(request);
+  },
+
+  getHold: async (request: any) => {
+    const method = promisifyGRPCMethod(escrowClient, 'GetHold');
+    return method(request);
+  },
+
+  releaseHold: async (request: any) => {
+    const method = promisifyGRPCMethod(escrowClient, 'ReleaseHold');
+    return method(request);
+  },
+
+  refundHold: async (request: any) => {
+    const method = promisifyGRPCMethod(escrowClient, 'RefundHold');
+    return method(request);
+  },
+
+  getEscrowAccount: async (request: any) => {
+    const method = promisifyGRPCMethod(escrowClient, 'GetEscrowAccount');
+    return method(request);
+  },
+
+  getAvailableBalance: async (request: any) => {
+    const method = promisifyGRPCMethod(escrowClient, 'GetAvailableBalance');
+    return method(request);
+  },
+
+  requestPayout: async (request: any) => {
+    const method = promisifyGRPCMethod(escrowClient, 'RequestPayout');
+    return method(request);
+  },
+
+  getPayoutStatus: async (request: any) => {
+    const method = promisifyGRPCMethod(escrowClient, 'GetPayoutStatus');
+    return method(request);
+  },
+
+  getPayoutHistory: async (request: any) => {
+    const method = promisifyGRPCMethod(escrowClient, 'GetPayoutHistory');
+    return method(request);
+  },
+
+  getTransactionHistory: async (request: any) => {
+    const method = promisifyGRPCMethod(escrowClient, 'GetTransactionHistory');
+    return method(request);
+  },
+
+  openDispute: async (request: any) => {
+    const method = promisifyGRPCMethod(escrowClient, 'OpenDispute');
+    return method(request);
+  },
+
+  getDisputeStatus: async (request: any) => {
+    const method = promisifyGRPCMethod(escrowClient, 'GetDisputeStatus');
+    return method(request);
+  },
+};
+
 export function closeGRPCClients(): void {
   if (bookingClient) bookingClient.close();
   if (analyticsClient) analyticsClient.close();
@@ -367,6 +448,7 @@ export function closeGRPCClients(): void {
   if (inventoryClient) inventoryClient.close();
   if (notificationClient) notificationClient.close();
   if (identityClient) identityClient.close();
+  if (escrowClient) escrowClient.close();
   console.log('✅ gRPC clients closed');
 }
 

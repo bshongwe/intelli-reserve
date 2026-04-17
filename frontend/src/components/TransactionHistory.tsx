@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useTransactionHistory } from '@/hooks/useEscrow';
-import { formatCentsToUSD, formatDate, getTransactionTypeLabel } from '@/lib/escrow-api';
+import { formatCentsToZAR, formatDate, getTransactionTypeLabel } from '@/lib/escrow-api';
 import { AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 
 // ============================================================================
@@ -130,7 +130,7 @@ export function TransactionHistory({
               <div className="text-right">
                 <p className={`font-semibold ${amountColor}`}>
                   {amountPrefix}
-                  {formatCentsToUSD(Math.abs(transaction.amountCents))}
+                  {formatCentsToZAR(Math.abs(transaction.amountCents))}
                 </p>
               </div>
             </div>

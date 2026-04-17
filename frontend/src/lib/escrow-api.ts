@@ -383,14 +383,20 @@ export async function getDisputeStatus(disputeId: string): Promise<Dispute> {
 // ============================================================================
 
 /**
- * Format cents to USD currency string
+ * Format cents to ZAR (South African Rand) currency string
  */
-export function formatCentsToUSD(cents: number): string {
-  const dollars = cents / 100;
-  return new Intl.NumberFormat('en-US', {
+export function formatCentsToZAR(cents: number | undefined | null): string {
+  if (cents === null || cents === undefined || Number.isNaN(cents)) {
+    return new Intl.NumberFormat('en-ZA', {
+      style: 'currency',
+      currency: 'ZAR',
+    }).format(0);
+  }
+  const rands = cents / 100;
+  return new Intl.NumberFormat('en-ZA', {
     style: 'currency',
-    currency: 'USD',
-  }).format(dollars);
+    currency: 'ZAR',
+  }).format(rands);
 }
 
 /**

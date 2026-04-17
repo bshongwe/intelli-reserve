@@ -248,6 +248,11 @@ export const servicesManagement = {
     return method(request);
   },
 
+  getBrowseableServices: async (request: any) => {
+    const method = promisifyGRPCMethod(servicesClient, 'GetBrowseableServices');
+    return method(request);
+  },
+
   updateService: async (request: any) => {
     const method = promisifyGRPCMethod(servicesClient, 'UpdateService');
     return method(request);

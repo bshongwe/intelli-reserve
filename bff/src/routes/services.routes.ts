@@ -23,19 +23,16 @@ export function createServiceRoutes(pool: Pool): Router {
   // GET /api/services/browse — all active services across all hosts (client-facing)
   router.get('/browse', async (req: Request, res: Response) => {
     try {
-      const result = await pool.query(
-        `SELECT id, host_id, name, description, category, duration_minutes, base_price, max_participants, is_active, created_at, updated_at
-         FROM services WHERE is_active = true ORDER BY created_at DESC`
-      );
-      res.json(result.rows.map((r: any) => ({
-        id: r.id, hostId: r.host_id, name: r.name, description: r.description,
-        category: r.category, durationMinutes: r.duration_minutes, basePrice: r.base_price,
-        maxParticipants: r.max_participants, isActive: r.is_active,
-        createdAt: r.created_at, updatedAt: r.updated_at,
-      })));
+      const limit = req.query.limit ? Number.parseInt(req.query.limit as string) : 50;
+      const offset = req.query.offset ? Number.parseInt(req.query.offset as string) : 0;
+
+      const response = await ServicesManagementAdapter.getBrowseableServices(limit, offset);
+      if (!response.success) return res.status(500).json({ error: response.error_message || 'Failed to fetch services' });
+
+      res.json((response.services || []).map(mapService));
     } catch (error: any) {
       console.error('Error browsing services:', error);
-      res.status(500).json({ error: 'Failed to fetch services' });
+      res.status(500).json({ error: error?.details || error?.message || 'Failed to fetch services' });
     }
   });
 

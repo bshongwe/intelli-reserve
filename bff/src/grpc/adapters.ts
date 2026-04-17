@@ -156,6 +156,10 @@ export const ServicesManagementAdapter = {
     return await servicesManagement.getHostServices({ host_id: hostId, only_active: onlyActive, limit, offset });
   },
 
+  async getBrowseableServices(limit: number = 50, offset: number = 0) {
+    return await servicesManagement.getBrowseableServices({ limit, offset });
+  },
+
   async getService(serviceId: string) {
     return await servicesManagement.getService({ service_id: serviceId });
   },

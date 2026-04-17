@@ -177,6 +177,50 @@ func (s *ServicesManagementServer) GetHostServices(ctx context.Context, req *pb.
 	return &pb.GetHostServicesResponse{Success: true, Services: services, TotalCount: totalCount}, nil
 }
 
+func (s *ServicesManagementServer) GetBrowseableServices(ctx context.Context, req *pb.GetBrowseableServicesRequest) (*pb.GetBrowseableServicesResponse, error) {
+	limit := req.Limit
+	if limit <= 0 || limit > 1000 {
+		limit = 50
+	}
+	offset := req.Offset
+	if offset < 0 {
+		offset = 0
+	}
+
+	query := `SELECT id, host_id, name, description, category, duration_minutes, base_price, max_participants, is_active, created_at, updated_at
+	          FROM services WHERE is_active = true ORDER BY created_at DESC LIMIT $1 OFFSET $2`
+
+	rows, err := s.db.Query(ctx, query, limit, offset)
+	if err != nil {
+		log.Printf("Error fetching browseable services: %v", err)
+		return &pb.GetBrowseableServicesResponse{Success: false, ErrorMessage: fmt.Sprintf("failed to fetch services: %v", err)},
+			status.Error(codes.Internal, "failed to fetch services")
+	}
+	defer rows.Close()
+
+	var services []*common.Service
+	for rows.Next() {
+		var svc common.Service
+		var createdAt, updatedAt time.Time
+		if err := rows.Scan(
+			&svc.Id, &svc.HostId, &svc.Name, &svc.Description, &svc.Category,
+			&svc.DurationMinutes, &svc.BasePrice, &svc.MaxParticipants, &svc.IsActive,
+			&createdAt, &updatedAt,
+		); err != nil {
+			log.Printf("Error scanning service: %v", err)
+			continue
+		}
+		svc.CreatedAt = formatTS(createdAt)
+		svc.UpdatedAt = formatTS(updatedAt)
+		services = append(services, &svc)
+	}
+
+	var totalCount int32
+	s.db.QueryRow(ctx, "SELECT COUNT(*) FROM services WHERE is_active = true").Scan(&totalCount)
+
+	return &pb.GetBrowseableServicesResponse{Success: true, Services: services, TotalCount: totalCount}, nil
+}
+
 func (s *ServicesManagementServer) UpdateService(ctx context.Context, req *pb.UpdateServiceRequest) (*pb.UpdateServiceResponse, error) {
 	if req.ServiceId == "" {
 		return &pb.UpdateServiceResponse{Success: false, ErrorMessage: "service_id is required"},

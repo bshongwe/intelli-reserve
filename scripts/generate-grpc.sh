@@ -19,7 +19,7 @@ go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 
 # Clean previous generated files
-rm -rf "$GEN_DIR"/*
+find "$GEN_DIR" -name "*.pb.go" -delete
 mkdir -p "$GEN_DIR"
 
 # Generate code for each proto file

@@ -55,25 +55,21 @@ export class OfflineDb extends Dexie {
   }
 
   /**
-   * Update request status
+   * Update request status (does not modify retryCount)
    */
   async updateStatus(
     requestId: string,
     status: QueuedRequest['status'],
     error?: string
   ) {
-    return this.queue.update(requestId, {
-      status,
-      lastError: error,
-      updatedAt: new Date(),
-      retryCount: this.queue
-        .where('requestId')
-        .equals(requestId)
-        .toArray()
-        .then((items) =>
-          items[0]?.retryCount ? items[0].retryCount + 1 : 0
-        ),
-    });
+    return this.queue
+      .where('requestId')
+      .equals(requestId)
+      .modify({
+        status,
+        lastError: error,
+        updatedAt: new Date(),
+      });
   }
 
   /**
@@ -84,21 +80,20 @@ export class OfflineDb extends Dexie {
   }
 
   /**
-   * Increment retry count
+   * Increment retry count and return new count
    */
-  async incrementRetry(requestId: string) {
-    const items = await this.queue
+  async incrementRetry(requestId: string): Promise<number> {
+    let newCount = 0;
+    await this.queue
       .where('requestId')
       .equals(requestId)
-      .toArray();
-    if (items.length > 0) {
-      return this.queue.update(requestId, {
-        retryCount: items[0].retryCount + 1,
-        status: 'retrying',
-        updatedAt: new Date(),
+      .modify((item) => {
+        item.retryCount = (item.retryCount ?? 0) + 1;
+        item.status = 'retrying';
+        item.updatedAt = new Date();
+        newCount = item.retryCount;
       });
-    }
-    return undefined;
+    return newCount;
   }
 
   /**
@@ -137,5 +132,22 @@ export class OfflineDb extends Dexie {
   }
 }
 
-// Singleton instance
-export const offlineDb = new OfflineDb();
+// Singleton instance (lazy; SSR-safe)
+let _offlineDb: OfflineDb | null = null;
+
+export function getOfflineDb(): OfflineDb {
+  if (globalThis.window === undefined) {
+    throw new TypeError('offlineDb is only available in the browser');
+  }
+  if (!_offlineDb) {
+    _offlineDb = new OfflineDb();
+  }
+  return _offlineDb;
+}
+
+// Fallback export for backward compatibility (but typed to error in SSR)
+export const offlineDb: OfflineDb = new Proxy({} as OfflineDb, {
+  get(_target, prop) {
+    return Reflect.get(getOfflineDb(), prop, getOfflineDb());
+  },
+});

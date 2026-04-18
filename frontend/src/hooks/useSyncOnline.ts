@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { getSyncManager } from '@/services/syncManager';
 import { useOnlineEvent } from '@/hooks/useConnectionStatus';
 
@@ -9,7 +9,7 @@ import { useOnlineEvent } from '@/hooks/useConnectionStatus';
  * Should be called once in the app root
  */
 export function useSyncOnline() {
-  const handleOnline = async () => {
+  const handleOnline = useCallback(async () => {
     try {
       console.log('🌐 Back online - syncing offline queue...');
       const syncManager = getSyncManager();
@@ -17,7 +17,7 @@ export function useSyncOnline() {
     } catch (error) {
       console.error('Error syncing offline queue:', error);
     }
-  };
+  }, []);
 
   // Listen for custom online event
   useOnlineEvent(handleOnline);

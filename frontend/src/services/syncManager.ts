@@ -24,13 +24,16 @@ export class SyncManager {
 
     this.isSyncing = true;
     console.log('🔄 Starting offline queue sync...');
+    this.dispatchSyncEvent('start', { timestamp: Date.now() });
+
+    let syncedCount = 0;
+    let syncError: string | undefined;
 
     try {
       const pendingRequests = await offlineDb.getPendingRequests();
 
       if (pendingRequests.length === 0) {
         console.log('✅ No pending requests to sync');
-        this.isSyncing = false;
         return;
       }
 
@@ -48,12 +51,19 @@ export class SyncManager {
       }
 
       // Clean up synced items
-      await offlineDb.clearSynced();
+      const clearedCount = await offlineDb.clearSynced();
+      syncedCount = clearedCount || pendingRequests.length;
       console.log('✅ Offline queue sync complete');
     } catch (error) {
+      syncError = error instanceof Error ? error.message : 'Unknown error';
       console.error('❌ Error syncing offline queue:', error);
     } finally {
       this.isSyncing = false;
+      this.dispatchSyncEvent('complete', {
+        syncedCount,
+        timestamp: Date.now(),
+        error: syncError,
+      });
     }
   }
 
@@ -81,8 +91,12 @@ export class SyncManager {
       await offlineDb.removeRequest(requestId);
       console.log(`✅ ${requestId} synced successfully`);
 
-      // Dispatch success event
-      this.dispatchSyncEvent('success', { requestId, response });
+      // Dispatch success event with cloneable payload only
+      this.dispatchSyncEvent('success', {
+        requestId,
+        status: response.status,
+        statusText: response.statusText,
+      });
     } catch (error) {
       const errorMessage = axios.isAxiosError(error)
         ? error.message
@@ -90,13 +104,14 @@ export class SyncManager {
 
       console.error(`❌ Retry failed for ${requestId}: ${errorMessage}`);
 
-      // Check if we should retry again
-      if (request.retryCount < maxRetries) {
-        await offlineDb.incrementRetry(requestId);
+      // Check if we should retry again (check against request.retryCount + 1 since we haven't incremented yet)
+      const nextRetryCount = request.retryCount + 1;
+      if (nextRetryCount < maxRetries) {
+        const newCount = await offlineDb.incrementRetry(requestId);
         console.log(
-          `⏳ Will retry ${requestId} (${request.retryCount + 1}/${maxRetries})`
+          `⏳ Will retry ${requestId} (${newCount}/${maxRetries})`
         );
-        this.dispatchSyncEvent('retry', { requestId, retryCount: request.retryCount + 1 });
+        this.dispatchSyncEvent('retry', { requestId, retryCount: newCount });
       } else {
         // Max retries exceeded
         await offlineDb.updateStatus(requestId, 'failed', errorMessage);

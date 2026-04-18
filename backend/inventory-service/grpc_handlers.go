@@ -10,6 +10,10 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	errTimeSlotNotFound = "Time slot not found"
+)
+
 type InventoryServiceServer struct {
 	db *pgx.Conn
 	pb.UnimplementedInventoryServiceServer
@@ -120,7 +124,7 @@ func (s *InventoryServiceServer) UpdateOccupancy(ctx context.Context, req *pb.Up
 	var capacity int32
 	err := s.db.QueryRow(ctx, query, req.TimeSlotId).Scan(&capacity)
 	if err != nil {
-		return &pb.UpdateOccupancyResponse{Success: false, ErrorMessage: "Time slot not found"}, nil
+		return &pb.UpdateOccupancyResponse{Success: false, ErrorMessage: errTimeSlotNotFound}, nil
 	}
 
 	isAvailable := req.BookedCount < capacity

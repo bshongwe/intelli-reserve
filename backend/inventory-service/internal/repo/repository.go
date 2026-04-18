@@ -11,6 +11,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+const (
+	errServiceNotFound   = "service not found"
+	errTimeSlotNotFound  = "time slot not found"
+)
+
 // ServiceRepository handles database operations for services
 type ServiceRepository struct {
 	pool *pgxpool.Pool
@@ -118,7 +123,7 @@ func (r *ServiceRepository) DeleteService(ctx context.Context, id uuid.UUID) err
 	}
 
 	if result.RowsAffected() == 0 {
-		return fmt.Errorf("service not found")
+		return fmt.Errorf(errServiceNotFound)
 	}
 
 	return nil
@@ -190,7 +195,7 @@ func (r *TimeSlotRepository) DeleteTimeSlot(ctx context.Context, id uuid.UUID) e
 	}
 
 	if result.RowsAffected() == 0 {
-		return fmt.Errorf("time slot not found")
+		return fmt.Errorf(errTimeSlotNotFound)
 	}
 
 	return nil

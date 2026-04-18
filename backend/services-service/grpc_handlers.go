@@ -14,6 +14,17 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// ============================================================================
+// ERROR MESSAGE CONSTANTS (Zero Duplicate Strings)
+// ============================================================================
+
+const (
+	errServiceIDRequired   = "service_id is required"
+	errServiceNotFound     = "service not found"
+	errTimeSlotIDRequired  = "time_slot_id is required"
+	errTimeSlotNotFound    = "time slot not found"
+)
+
 type ServicesManagementServer struct {
 	pb.UnimplementedServicesManagementServer
 	db *pgx.Conn
@@ -93,8 +104,8 @@ func (s *ServicesManagementServer) CreateService(ctx context.Context, req *pb.Cr
 
 func (s *ServicesManagementServer) GetService(ctx context.Context, req *pb.GetServiceRequest) (*pb.GetServiceResponse, error) {
 	if req.ServiceId == "" {
-		return &pb.GetServiceResponse{Success: false, ErrorMessage: "service_id is required"},
-			status.Error(codes.InvalidArgument, "service_id is required")
+		return &pb.GetServiceResponse{Success: false, ErrorMessage: errServiceIDRequired},
+			status.Error(codes.InvalidArgument, errServiceIDRequired)
 	}
 
 	svc, err := scanService(s.db.QueryRow(ctx,
@@ -103,8 +114,8 @@ func (s *ServicesManagementServer) GetService(ctx context.Context, req *pb.GetSe
 		req.ServiceId,
 	))
 	if err == pgx.ErrNoRows {
-		return &pb.GetServiceResponse{Success: false, ErrorMessage: "service not found"},
-			status.Error(codes.NotFound, "service not found")
+		return &pb.GetServiceResponse{Success: false, ErrorMessage: errServiceNotFound},
+			status.Error(codes.NotFound, errServiceNotFound)
 	}
 	if err != nil {
 		log.Printf("Error fetching service: %v", err)
@@ -223,8 +234,8 @@ func (s *ServicesManagementServer) GetBrowseableServices(ctx context.Context, re
 
 func (s *ServicesManagementServer) UpdateService(ctx context.Context, req *pb.UpdateServiceRequest) (*pb.UpdateServiceResponse, error) {
 	if req.ServiceId == "" {
-		return &pb.UpdateServiceResponse{Success: false, ErrorMessage: "service_id is required"},
-			status.Error(codes.InvalidArgument, "service_id is required")
+		return &pb.UpdateServiceResponse{Success: false, ErrorMessage: errServiceIDRequired},
+			status.Error(codes.InvalidArgument, errServiceIDRequired)
 	}
 
 	now := time.Now().UTC()
@@ -249,8 +260,8 @@ func (s *ServicesManagementServer) UpdateService(ctx context.Context, req *pb.Up
 
 	svc, err := scanService(s.db.QueryRow(ctx, query, args...))
 	if err == pgx.ErrNoRows {
-		return &pb.UpdateServiceResponse{Success: false, ErrorMessage: "service not found"},
-			status.Error(codes.NotFound, "service not found")
+		return &pb.UpdateServiceResponse{Success: false, ErrorMessage: errServiceNotFound},
+			status.Error(codes.NotFound, errServiceNotFound)
 	}
 	if err != nil {
 		log.Printf("Error updating service: %v", err)
@@ -264,8 +275,8 @@ func (s *ServicesManagementServer) UpdateService(ctx context.Context, req *pb.Up
 
 func (s *ServicesManagementServer) DeleteService(ctx context.Context, req *pb.DeleteServiceRequest) (*pb.DeleteServiceResponse, error) {
 	if req.ServiceId == "" {
-		return &pb.DeleteServiceResponse{Success: false, ErrorMessage: "service_id is required"},
-			status.Error(codes.InvalidArgument, "service_id is required")
+		return &pb.DeleteServiceResponse{Success: false, ErrorMessage: errServiceIDRequired},
+			status.Error(codes.InvalidArgument, errServiceIDRequired)
 	}
 
 	result, err := s.db.Exec(ctx, `DELETE FROM services WHERE id = $1`, req.ServiceId)
@@ -275,8 +286,8 @@ func (s *ServicesManagementServer) DeleteService(ctx context.Context, req *pb.De
 			status.Error(codes.Internal, "failed to delete service")
 	}
 	if result.RowsAffected() == 0 {
-		return &pb.DeleteServiceResponse{Success: false, ErrorMessage: "service not found"},
-			status.Error(codes.NotFound, "service not found")
+		return &pb.DeleteServiceResponse{Success: false, ErrorMessage: errServiceNotFound},
+			status.Error(codes.NotFound, errServiceNotFound)
 	}
 
 	log.Printf("✅ Service deleted: %s", req.ServiceId)
@@ -312,8 +323,8 @@ func (s *ServicesManagementServer) CreateTimeSlot(ctx context.Context, req *pb.C
 
 func (s *ServicesManagementServer) GetTimeSlot(ctx context.Context, req *pb.GetTimeSlotRequest) (*pb.GetTimeSlotResponse, error) {
 	if req.TimeSlotId == "" {
-		return &pb.GetTimeSlotResponse{Success: false, ErrorMessage: "time_slot_id is required"},
-			status.Error(codes.InvalidArgument, "time_slot_id is required")
+		return &pb.GetTimeSlotResponse{Success: false, ErrorMessage: errTimeSlotIDRequired},
+			status.Error(codes.InvalidArgument, errTimeSlotIDRequired)
 	}
 
 	ts, err := scanTimeSlot(s.db.QueryRow(ctx,
@@ -322,8 +333,8 @@ func (s *ServicesManagementServer) GetTimeSlot(ctx context.Context, req *pb.GetT
 		req.TimeSlotId,
 	))
 	if err == pgx.ErrNoRows {
-		return &pb.GetTimeSlotResponse{Success: false, ErrorMessage: "time slot not found"},
-			status.Error(codes.NotFound, "time slot not found")
+		return &pb.GetTimeSlotResponse{Success: false, ErrorMessage: errTimeSlotNotFound},
+			status.Error(codes.NotFound, errTimeSlotNotFound)
 	}
 	if err != nil {
 		log.Printf("Error fetching time slot: %v", err)
@@ -336,8 +347,8 @@ func (s *ServicesManagementServer) GetTimeSlot(ctx context.Context, req *pb.GetT
 
 func (s *ServicesManagementServer) GetAvailableTimeSlots(ctx context.Context, req *pb.GetAvailableTimeSlotsRequest) (*pb.GetAvailableTimeSlotsResponse, error) {
 	if req.ServiceId == "" {
-		return &pb.GetAvailableTimeSlotsResponse{Success: false, ErrorMessage: "service_id is required"},
-			status.Error(codes.InvalidArgument, "service_id is required")
+		return &pb.GetAvailableTimeSlotsResponse{Success: false, ErrorMessage: errServiceIDRequired},
+			status.Error(codes.InvalidArgument, errServiceIDRequired)
 	}
 
 	query := `SELECT id, service_id, slot_date, start_time, end_time, is_available, created_at, updated_at
@@ -381,8 +392,8 @@ func (s *ServicesManagementServer) GetAvailableTimeSlots(ctx context.Context, re
 
 func (s *ServicesManagementServer) UpdateTimeSlotAvailability(ctx context.Context, req *pb.UpdateTimeSlotAvailabilityRequest) (*pb.UpdateTimeSlotAvailabilityResponse, error) {
 	if req.TimeSlotId == "" {
-		return &pb.UpdateTimeSlotAvailabilityResponse{Success: false, ErrorMessage: "time_slot_id is required"},
-			status.Error(codes.InvalidArgument, "time_slot_id is required")
+		return &pb.UpdateTimeSlotAvailabilityResponse{Success: false, ErrorMessage: errTimeSlotIDRequired},
+			status.Error(codes.InvalidArgument, errTimeSlotIDRequired)
 	}
 
 	now := time.Now().UTC()
@@ -392,8 +403,8 @@ func (s *ServicesManagementServer) UpdateTimeSlotAvailability(ctx context.Contex
 		req.IsAvailable, now, req.TimeSlotId,
 	))
 	if err == pgx.ErrNoRows {
-		return &pb.UpdateTimeSlotAvailabilityResponse{Success: false, ErrorMessage: "time slot not found"},
-			status.Error(codes.NotFound, "time slot not found")
+		return &pb.UpdateTimeSlotAvailabilityResponse{Success: false, ErrorMessage: errTimeSlotNotFound},
+			status.Error(codes.NotFound, errTimeSlotNotFound)
 	}
 	if err != nil {
 		log.Printf("Error updating time slot availability: %v", err)
@@ -407,8 +418,8 @@ func (s *ServicesManagementServer) UpdateTimeSlotAvailability(ctx context.Contex
 
 func (s *ServicesManagementServer) DeleteTimeSlot(ctx context.Context, req *pb.DeleteTimeSlotRequest) (*pb.DeleteTimeSlotResponse, error) {
 	if req.TimeSlotId == "" {
-		return &pb.DeleteTimeSlotResponse{Success: false, ErrorMessage: "time_slot_id is required"},
-			status.Error(codes.InvalidArgument, "time_slot_id is required")
+		return &pb.DeleteTimeSlotResponse{Success: false, ErrorMessage: errTimeSlotIDRequired},
+			status.Error(codes.InvalidArgument, errTimeSlotIDRequired)
 	}
 
 	result, err := s.db.Exec(ctx, `DELETE FROM time_slots WHERE id = $1`, req.TimeSlotId)
@@ -418,8 +429,8 @@ func (s *ServicesManagementServer) DeleteTimeSlot(ctx context.Context, req *pb.D
 			status.Error(codes.Internal, "failed to delete time slot")
 	}
 	if result.RowsAffected() == 0 {
-		return &pb.DeleteTimeSlotResponse{Success: false, ErrorMessage: "time slot not found"},
-			status.Error(codes.NotFound, "time slot not found")
+		return &pb.DeleteTimeSlotResponse{Success: false, ErrorMessage: errTimeSlotNotFound},
+			status.Error(codes.NotFound, errTimeSlotNotFound)
 	}
 
 	log.Printf("✅ Time slot deleted: %s", req.TimeSlotId)

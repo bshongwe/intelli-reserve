@@ -354,6 +354,12 @@ export const EscrowServiceAdapter = {
     });
   },
 
+  async getHoldsByBookingId(bookingId: string) {
+    return await escrowService.getHoldsByBookingId({
+      booking_id: bookingId,
+    });
+  },
+
   async releaseHold(holdId: string, hostId: string) {
     return await escrowService.releaseHold({
       hold_id: holdId,

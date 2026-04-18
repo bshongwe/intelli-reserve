@@ -113,12 +113,10 @@ router.get('/holds', async (req, res) => {
       return res.status(400).json({ error: 'bookingId query parameter is required' });
     }
     
-    // For now, return empty array since we don't have a query-by-booking endpoint
-    // This prevents the frontend from crashing when checking payment status
-    // In production, you'd query the escrow service for holds by booking ID
+    const response = await EscrowServiceAdapter.getHoldsByBookingId(bookingId);
     res.json({
       message: 'Holds retrieved successfully',
-      holds: [],
+      holds: response.holds || [],
     });
   } catch (error: any) {
     console.error('[Escrow Routes] Error querying holds:', error);

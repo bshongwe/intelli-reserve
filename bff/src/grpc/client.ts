@@ -395,6 +395,11 @@ export const escrowService = {
     return method(request);
   },
 
+  getHoldsByBookingId: async (request: any) => {
+    const method = promisifyGRPCMethod(escrowClient, 'GetHoldsByBookingId');
+    return method(request);
+  },
+
   releaseHold: async (request: any) => {
     const method = promisifyGRPCMethod(escrowClient, 'ReleaseHold');
     return method(request);

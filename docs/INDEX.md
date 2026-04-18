@@ -1,38 +1,106 @@
 # Documentation Index
 
-Welcome to the IntelliReserve documentation! This index helps you navigate all available documentation.
+Comprehensive documentation for IntelliReserve – a production-ready booking platform with offline support, escrow payments, and real-time analytics.
 
-## Getting Started
+## Documentation Overview
 
-- **[README.md](../README.md)** – Main project overview and quick start guide
-- **[ARCHITECTURE.md](./ARCHITECTURE.md)** – System design and technology stack (START HERE for system understanding)
-- **[DATA_FLOW.md](./DATA_FLOW.md)** – Detailed flow diagrams for all major operations
+| Document | Purpose | Audience |
+|----------|---------|----------|
+| **[FEATURES.md](./FEATURES.md)** | What the system can do | Everyone (product, eng, design) |
+| **[ARCHITECTURE.md](./ARCHITECTURE.md)** | How the system is built | Engineers, architects |
+| **[IMPLEMENTATION.md](./IMPLEMENTATION.md)** | Technical deep-dives | Backend engineers |
+| **[DATA_FLOW.md](./DATA_FLOW.md)** | Request/response flows | All engineers |
+| **[requirements.md](./requirements.md)** | Feature specifications | Product, QA |
+| **[ADRs/](./ADRs/)** | Design decisions | Architects, leads |
 
-## Key Documentation
+## Quick Navigation
 
-### System Design
-- [ARCHITECTURE.md](./ARCHITECTURE.md)
-  - System overview with architectural diagram
-  - Three-tier architecture explanation
-  - Technology stack for each layer
-  - Service responsibilities
-  - Communication patterns
-  - Performance benchmarks
+### For Product Managers / Project Leads
+1. **[FEATURES.md](./FEATURES.md)** – Complete feature inventory and roadmap
+2. **[DATA_FLOW.md](./DATA_FLOW.md)** – See how booking and payment flows work
+3. **[ARCHITECTURE.md](./ARCHITECTURE.md)** → Performance Benchmarks section
 
-### Data & Operations
-- [DATA_FLOW.md](./DATA_FLOW.md)
-  - Step-by-step booking creation flow
-  - Real-time booking confirmation flow
-  - Dashboard metrics calculation
-  - Timestamp handling across layers
-  - Error handling flow
-  - State management with React Query
-  - Race condition handling
-  - Performance optimizations
+### For Engineers (Getting Started)
+1. **[README.md](../README.md)** – Quick start and prerequisites
+2. **[ARCHITECTURE.md](./ARCHITECTURE.md)** – System design and topology
+3. **[DATA_FLOW.md](./DATA_FLOW.md)** – Understanding data movement
+4. **[IMPLEMENTATION.md](./IMPLEMENTATION.md)** – Specific feature implementations
 
-### Requirements & Planning
-- [requirements.md](./requirements.md) – Feature specifications and system requirements
-- [ADRs/](./ADRs/) – Architecture Decision Records with rationale
+### For Backend Engineers
+1. **[ARCHITECTURE.md](./ARCHITECTURE.md)** → Key Services Architecture section
+2. **[IMPLEMENTATION.md](./IMPLEMENTATION.md)** – Error handling, timestamps, queries
+3. **[DATA_FLOW.md](./DATA_FLOW.md)** → gRPC communication patterns
+
+### For Frontend Engineers
+1. **[FEATURES.md](./FEATURES.md)** → Offline-First Architecture section
+2. **[IMPLEMENTATION.md](./IMPLEMENTATION.md)** → Offline Sync Deep-Dive
+3. **[DATA_FLOW.md](./DATA_FLOW.md)** → State Management Flow section
+
+### For DevOps / Infrastructure
+1. **[ARCHITECTURE.md](./ARCHITECTURE.md)** → Deployment Architecture section
+2. **[ARCHITECTURE.md](./ARCHITECTURE.md)** → Service Port Registry
+3. Check `infra/` directory for Terraform and Kubernetes manifests
+
+## Documentation Structure
+
+### FEATURES.md
+Describes what the system can do, organized by capability area:
+- Core booking system
+- Host dashboard
+- Client experience
+- Analytics & reporting
+- Payment processing
+- Offline support
+- Feature completeness matrix with roadmap
+
+**Read this to**: Understand capabilities, plan features, communicate with stakeholders
+
+### ARCHITECTURE.md
+Describes the system design and technology choices:
+- System overview with mermaid diagrams
+- Three-tier architecture (Frontend → BFF → Services)
+- Service topology and responsibilities
+- Technology stack for each layer
+- Communication patterns (sync/async)
+- Performance benchmarks
+- Deployment diagrams (development & production)
+
+**Read this to**: Understand overall system design, make architectural decisions
+
+### IMPLEMENTATION.md
+Technical deep-dives into how key features work:
+- Offline-first synchronization (queue, retry, sync)
+- Payment status checking (gRPC method, backend, frontend)
+- Error message constants (DRY principle)
+- Timestamp handling across layers
+- Database query optimization
+- gRPC communication patterns
+- Frontend state management
+- Security implementations
+- Known limitations & future work
+
+**Read this to**: Implement features, debug complex issues, understand trade-offs
+
+### DATA_FLOW.md
+Step-by-step flows for all major operations:
+- Booking creation workflow
+- Booking confirmation workflow
+- Dashboard metrics calculation
+- Payment hold lifecycle
+- Offline sync workflow
+- Error handling flow
+- State management with React Query
+- Performance optimizations
+
+**Read this to**: Understand request/response flows, debug data issues, trace requests
+
+### requirements.md
+Feature specifications and system requirements (currently empty - can be extended)
+
+### ADRs/
+Architecture Decision Records - why we made certain design choices
+
+**Read this to**: Understand rationale behind architectural decisions
 
 ## Quick Reference
 
@@ -88,74 +156,186 @@ See [DATA_FLOW.md](./DATA_FLOW.md) → **State Management Flow**
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) → **Performance Benchmarks** and [DATA_FLOW.md](./DATA_FLOW.md) → **Performance Optimizations**
 
+## Documentation Structure
+
+### FEATURES.md
+Describes what the system can do, organized by capability area:
+- Core booking system
+- Host dashboard
+- Client experience
+- Analytics & reporting
+- Payment processing
+- Offline support
+- Feature completeness matrix with roadmap
+
+**Read this to**: Understand capabilities, plan features, communicate with stakeholders
+
+### ARCHITECTURE.md
+Describes the system design and technology choices:
+- System overview with mermaid diagrams
+- Three-tier architecture (Frontend → BFF → Services)
+- Service topology and responsibilities
+- Technology stack for each layer
+- Communication patterns (sync/async)
+- Performance benchmarks
+- Deployment diagrams (development & production)
+- Production status and roadmap
+
+**Read this to**: Understand overall system design, make architectural decisions
+
+### IMPLEMENTATION.md
+Technical deep-dives into how key features work:
+- Offline-first synchronization (queue, retry, sync)
+- Payment status checking (gRPC method, backend, frontend)
+- Error message constants (DRY principle)
+- Timestamp handling across layers
+- Database query optimization
+- gRPC communication patterns
+- Frontend state management
+- Security implementations
+- Known limitations & future work
+
+**Read this to**: Implement features, debug complex issues, understand trade-offs
+
+### DATA_FLOW.md
+Step-by-step flows for all major operations:
+- Booking creation workflow
+- Booking confirmation workflow
+- Dashboard metrics calculation
+- Payment hold lifecycle
+- Offline sync workflow
+- Error handling flow
+- State management with React Query
+- Performance optimizations
+
+**Read this to**: Understand request/response flows, debug data issues, trace requests
+
+### requirements.md
+Feature specifications and system requirements
+
+**Read this to**: Understand detailed feature requirements
+
+### ADRs/
+Architecture Decision Records - why we made certain design choices
+
+**Read this to**: Understand rationale behind architectural decisions
+
+## Topic-Based Navigation
+
+### How do I...?
+
+**...understand how bookings work?**
+1. Read [FEATURES.md](./FEATURES.md) → Core Booking System
+2. Study [DATA_FLOW.md](./DATA_FLOW.md) → Booking Creation Flow
+3. Review [ARCHITECTURE.md](./ARCHITECTURE.md) → Key Services Architecture → Booking Service
+
+**...understand offline support?**
+1. Read [FEATURES.md](./FEATURES.md) → Offline-First Architecture
+2. Study [IMPLEMENTATION.md](./IMPLEMENTATION.md) → Offline-First Synchronization
+3. Check [DATA_FLOW.md](./DATA_FLOW.md) for offline workflow
+
+**...understand payment processing?**
+1. Read [FEATURES.md](./FEATURES.md) → Payment Processing & Escrow
+2. Study [IMPLEMENTATION.md](./IMPLEMENTATION.md) → Payment Status Check
+3. Review [ARCHITECTURE.md](./ARCHITECTURE.md) → Key Services Architecture → Escrow Service
+
+**...understand real-time metrics?**
+1. Read [FEATURES.md](./FEATURES.md) → Analytics & Reporting
+2. Study [DATA_FLOW.md](./DATA_FLOW.md) → Dashboard Metrics Calculation
+3. Review [ARCHITECTURE.md](./ARCHITECTURE.md) → Key Services Architecture → Analytics Service
+
+**...understand the frontend architecture?**
+1. Read [FEATURES.md](./FEATURES.md) → Technical Implementation → Frontend Capabilities
+2. Study [IMPLEMENTATION.md](./IMPLEMENTATION.md) → Frontend State Management
+3. Review [DATA_FLOW.md](./DATA_FLOW.md) → State Management Flow
+
+**...understand the backend architecture?**
+1. Read [ARCHITECTURE.md](./ARCHITECTURE.md) → System Overview diagram
+2. Study [IMPLEMENTATION.md](./IMPLEMENTATION.md) → gRPC Communication
+3. Review [DATA_FLOW.md](./DATA_FLOW.md) → Service Communication
+
+**...add a new API endpoint?**
+1. Check [ARCHITECTURE.md](./ARCHITECTURE.md) → Service Port Registry
+2. Reference [DATA_FLOW.md](./DATA_FLOW.md) for similar flows
+3. Follow pattern in `bff/src/routes/`
+
+**...add a new database query?**
+1. Review [IMPLEMENTATION.md](./IMPLEMENTATION.md) → Database Query Optimization
+2. Check `backend/migrations/` for schema
+3. Follow gRPC pattern in service handlers
+
+**...debug a data flow issue?**
+1. Reference [DATA_FLOW.md](./DATA_FLOW.md) for expected flow
+2. Check [IMPLEMENTATION.md](./IMPLEMENTATION.md) for technical details
+3. Review logs: Network (browser) → BFF → Service → Database
+
+## System Overview Concepts
+
+### Key Architectural Decisions
+- **Three-tier architecture**: Frontend → BFF → Microservices ensures clear separation
+- **gRPC for backend**: Low-latency service-to-service communication
+- **Offline-first frontend**: Users can work offline with automatic sync
+- **Escrow payments**: Secure fund holding with PayFast integration
+- **Real-time analytics**: Live metrics from current booking data (no pre-aggregation)
+
+See [ADRs/](./ADRs/) for detailed decision records
+
+### Technology Choices
+- **Next.js 15 + React 18** for modern frontend with SSR
+- **Express.js** for lightweight API gateway
+- **Go + gRPC** for high-performance microservices
+- **PostgreSQL** for reliable relational data
+- **Dexie + IndexedDB** for browser persistence
+
+### Performance Characteristics
+- Booking operations: P50 ~45ms, P95 ~120ms
+- Dashboard metrics: P50 ~80ms, P95 ~200ms
+- Optimized with indexing and connection pooling
+- See [ARCHITECTURE.md](./ARCHITECTURE.md) → Performance Benchmarks
+
+### Production Status
+**What's Production-Ready** ✅
+- All core features fully implemented
+- Offline-first frontend with automatic sync
+- Escrow payment integration
+- Real-time analytics
+- Comprehensive error handling
+- Security best practices
+
+**What's Planned** 🔲
+- Payout automation
+- Dynamic pricing
+- Email verification
+- Advanced analytics
+- See [ARCHITECTURE.md](./ARCHITECTURE.md) → Production Status
+
 ## Development Resources
 
-### Understanding the Stack
+### Code Locations
+- Frontend: `frontend/src/`
+- BFF: `bff/src/routes/` and `bff/src/grpc/`
+- Services: `backend/{service-name}/grpc_handlers.go`
+- Definitions: `backend/proto/`
+- Migrations: `backend/migrations/`
+
+### Stack Components
 - **Frontend**: Next.js 15, React 18, TypeScript, shadcn/ui, TanStack Query
 - **BFF**: Express.js, TypeScript, gRPC, Zod validation
-- **Services**: Go, gRPC, pgx
+- **Services**: Go 1.21+, gRPC, pgx
 - **Database**: PostgreSQL 12+
-- **Live Services**: Booking, Analytics, Inventory, Services, Notification
+- **Offline**: Dexie IndexedDB wrapper
 
-### Code Locations
-- Frontend code: `frontend/src/`
-- BFF routes: `bff/src/routes/`
-- Booking service handlers: `backend/booking-service/grpc_handlers.go`
-- Proto definitions: `backend/proto/`
-- Database schema: `backend/migrations/`
-
-### Common Tasks
-
-**Adding a new API endpoint:**
-1. Define in BFF: `bff/src/routes/`
-2. Call appropriate service method via gRPC
-3. Transform and return JSON response
-4. Add frontend API method in `frontend/src/lib/api.ts`
-5. Update frontend component to use the method
-
-**Adding a new database query:**
-1. Update Go service: `backend/booking-service/`
-2. Add gRPC method definition in `backend/proto/`
-3. Implement handler in Go service
-4. Rebuild proto: `./scripts/generate-grpc.sh`
-5. Call from BFF via adapter
-6. Expose through REST endpoint
-
-**Debugging a data flow issue:**
-1. Check browser DevTools Network tab for API calls
-2. Review BFF logs for request/response
-3. Check PostgreSQL logs for query errors
-4. Review Go service logs for gRPC errors
-5. Reference [DATA_FLOW.md](./DATA_FLOW.md) for expected flow
-
-## FAQ
-
-**Q: How do timestamps work across the system?**
-A: See [ARCHITECTURE.md](./ARCHITECTURE.md) → **Timestamp Handling** and [DATA_FLOW.md](./DATA_FLOW.md) → **Data Type Conversions**
-
-**Q: How is real-time data kept in sync?**
-A: See [DATA_FLOW.md](./DATA_FLOW.md) → **State Management Flow** for React Query strategy
-
-**Q: What happens when booking status is updated?**
-A: See [DATA_FLOW.md](./DATA_FLOW.md) → **Booking Confirmation Flow** for complete timeline
-
-**Q: How are metrics calculated?**
-A: See [DATA_FLOW.md](./DATA_FLOW.md) → **Dashboard Metrics Flow** and SQL queries
-
-**Q: How does error handling work?**
-A: See [DATA_FLOW.md](./DATA_FLOW.md) → **Error Flow** for error propagation
-
-**Q: What's the performance like?**
-A: See [ARCHITECTURE.md](./ARCHITECTURE.md) → **Performance Benchmarks** for timing data
+### Running Locally
+See [../README.md](../README.md) → Quick Start section for setup instructions
 
 ## Contributing
 
-When adding new features:
-1. Update this documentation with new flows
-2. Add decision records in `ADRs/` if architectural changes
+When modifying or extending the system:
+1. Update relevant documentation with changes
+2. Add Architecture Decision Records for significant decisions
 3. Include performance implications
-4. Document any new data type conversions
-5. Update architecture diagrams if needed
+4. Update diagrams if architecture changes
+5. Test changes in local development environment
 
 ## Last Updated
 

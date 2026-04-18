@@ -97,8 +97,8 @@ export default function BookPage() {
           <Button variant="outline" className="flex-1" onClick={() => setConfirmedBooking(null)}>
             Book Another
           </Button>
-          <Link href="/dashboard/client/bookings" className="flex-1">
-            <Button className="w-full">View My Bookings</Button>
+          <Link href={`/dashboard/client/bookings/${confirmedBooking.id}/payment`} className="flex-1">
+            <Button className="w-full">Proceed to Payment</Button>
           </Link>
         </div>
       </div>

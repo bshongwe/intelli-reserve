@@ -187,6 +187,40 @@ export async function getAvailableBalance(hostId: string): Promise<number> {
 // API FUNCTIONS: Hold Operations
 // ============================================================================
 
+export async function createHold(
+  bookingId: string,
+  hostId: string,
+  clientId: string,
+  grossAmountCents: number,
+  platformFeeCents: number,
+  holdReason: string = 'booking_payment'
+): Promise<Hold> {
+  try {
+    const url = `${ESCROW_API_BASE}${ENDPOINT_HOLDS}`;
+    const response = await fetchWithAuth(url, {
+      method: 'POST',
+      body: JSON.stringify({
+        bookingId,
+        hostId,
+        clientId,
+        grossAmountCents,
+        platformFeeCents,
+        holdReason,
+      }),
+    });
+    const data = await parseResponse<ApiResponse<{ hold: Hold }>>(response);
+    
+    if (!data.hold) {
+      throw new Error(ERROR_INVALID_RESPONSE);
+    }
+    
+    return data.hold;
+  } catch (error) {
+    console.error('[Escrow API] Error creating hold:', error);
+    throw new Error(error instanceof Error ? error.message : 'Failed to create escrow hold');
+  }
+}
+
 export async function getHold(holdId: string): Promise<Hold> {
   try {
     const url = `${ESCROW_API_BASE}${ENDPOINT_HOLDS}/${holdId}`;

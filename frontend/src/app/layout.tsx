@@ -5,6 +5,7 @@ import { ThemeProvider } from "next-themes";
 import { QueryClientProvider } from "./providers/QueryClientProvider";
 import { AuthProvider } from "@/lib/auth-context";
 import { Toaster } from "@/components/ui/toaster";
+import { OfflineSync } from "@/components/OfflineSync";
 import { cn } from "@/lib/utils";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
@@ -29,6 +30,7 @@ export default function RootLayout({
             <QueryClientProvider>
               {children}
               <Toaster />
+              <OfflineSync />
             </QueryClientProvider>
           </AuthProvider>
         </ThemeProvider>

@@ -13,6 +13,7 @@ service EscrowService {
   // Hold operations
   rpc CreateHold(CreateHoldRequest) returns (CreateHoldResponse);
   rpc GetHold(GetHoldRequest) returns (GetHoldResponse);
+  rpc GetHoldsByBookingId(GetHoldsByBookingIdRequest) returns (GetHoldsByBookingIdResponse);
   rpc ReleaseHold(ReleaseHoldRequest) returns (ReleaseHoldResponse);
   rpc RefundHold(RefundHoldRequest) returns (RefundHoldResponse);
   
@@ -160,6 +161,16 @@ message GetHoldResponse {
   bool success = 1;
   string error_message = 2;
   EscrowHold hold = 3;
+}
+
+message GetHoldsByBookingIdRequest {
+  string booking_id = 1;
+}
+
+message GetHoldsByBookingIdResponse {
+  bool success = 1;
+  string error_message = 2;
+  repeated EscrowHold holds = 3;
 }
 
 message ReleaseHoldRequest {

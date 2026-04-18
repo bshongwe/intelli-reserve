@@ -102,6 +102,29 @@ router.post('/holds', async (req, res) => {
 });
 
 /**
+ * GET /api/escrow/holds
+ * Query holds by bookingId (query parameter)
+ */
+router.get('/holds', async (req, res) => {
+  try {
+    const { bookingId } = req.query;
+    
+    if (!bookingId || typeof bookingId !== 'string') {
+      return res.status(400).json({ error: 'bookingId query parameter is required' });
+    }
+    
+    const response = await EscrowServiceAdapter.getHoldsByBookingId(bookingId);
+    res.json({
+      message: 'Holds retrieved successfully',
+      holds: response.holds || [],
+    });
+  } catch (error: any) {
+    console.error('[Escrow Routes] Error querying holds:', error);
+    res.status(500).json({ error: 'Failed to query holds', details: error.message });
+  }
+});
+
+/**
  * GET /api/escrow/holds/:holdId
  * Retrieve hold details
  */

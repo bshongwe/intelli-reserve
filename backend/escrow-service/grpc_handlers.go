@@ -302,6 +302,19 @@ func (s *EscrowServiceServer) CreateHold(ctx context.Context, req *pb.CreateHold
 	)
 
 	if err != nil {
+		// Handle duplicate key error (hold already exists for this booking)
+		if err.Error() == "ERROR: duplicate key value violates unique constraint \"escrow_holds_booking_id_key\" (SQLSTATE 23505)" {
+			log.Printf("⚠️ Hold already exists for booking %s, retrieving existing hold", req.BookingId)
+			// Try to fetch the existing hold
+			existingHold, err := s.getExistingHold(ctx, req.BookingId)
+			if err == nil {
+				return &pb.CreateHoldResponse{
+					Success: true,
+					Hold:    existingHold,
+				}, nil
+			}
+		}
+		
 		log.Printf(logDBError, err)
 		// If payment was created but DB insert failed, attempt to refund
 		if paymentRef != "" && s.paymentGatewayClient != nil {
@@ -335,6 +348,41 @@ func (s *EscrowServiceServer) CreateHold(ctx context.Context, req *pb.CreateHold
 		Success: true,
 		Hold:    &hold,
 	}, nil
+}
+
+// Helper function to retrieve existing hold by booking ID
+func (s *EscrowServiceServer) getExistingHold(ctx context.Context, bookingID string) (*pb.EscrowHold, error) {
+	query := `
+		SELECT id, booking_id, host_id, client_id, gross_amount, platform_fee, host_amount,
+		       hold_status, payment_reference, created_at, updated_at
+		FROM escrow.escrow_holds
+		WHERE booking_id = $1
+		LIMIT 1
+	`
+
+	var hold pb.EscrowHold
+	hold.GrossAmount = &pb.Money{}
+	hold.PlatformFee = &pb.Money{}
+	hold.HostAmount = &pb.Money{}
+	var createdAtTime, updatedAtTime time.Time
+
+	err := s.db.QueryRow(ctx, query, bookingID).Scan(
+		&hold.Id, &hold.BookingId, &hold.HostId, &hold.ClientId,
+		&hold.GrossAmount.AmountCents, &hold.PlatformFee.AmountCents, &hold.HostAmount.AmountCents,
+		&hold.HoldStatus, &hold.PaymentReference, &createdAtTime, &updatedAtTime,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	hold.CreatedAt = createdAtTime.Format(time.RFC3339)
+	hold.UpdatedAt = updatedAtTime.Format(time.RFC3339)
+	hold.GrossAmount.Currency = "ZAR"
+	hold.PlatformFee.Currency = "ZAR"
+	hold.HostAmount.Currency = "ZAR"
+
+	return &hold, nil
 }
 
 // ============================================================================

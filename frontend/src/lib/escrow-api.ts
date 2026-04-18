@@ -238,6 +238,26 @@ export async function getHold(holdId: string): Promise<Hold> {
   }
 }
 
+export async function checkPaymentStatus(bookingId: string): Promise<boolean> {
+  try {
+    // Try to get hold for this booking
+    const url = `${ESCROW_API_BASE}${ENDPOINT_HOLDS}?bookingId=${bookingId}`;
+    const response = await fetchWithAuth(url);
+    const data = await parseResponse<ApiResponse<{ holds: Hold[] }>>(response);
+    
+    // If we get holds back and at least one is not refunded, payment has been made
+    if (data.holds && data.holds.length > 0) {
+      return data.holds.some((hold: Hold) => hold.status !== 'refunded');
+    }
+    
+    return false;
+  } catch (error: unknown) {
+    // If endpoint doesn't exist or errors, assume no payment
+    console.error('[Escrow API] Error checking payment status:', error);
+    return false;
+  }
+}
+
 export async function releaseHold(holdId: string, hostId: string): Promise<EscrowAccount> {
   try {
     const url = `${ESCROW_API_BASE}${ENDPOINT_HOLDS}/${holdId}/release`;

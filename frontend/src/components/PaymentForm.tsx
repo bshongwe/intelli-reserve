@@ -63,8 +63,13 @@ export function PaymentForm({
   // Listen for payment completion message from PayFast popup
   useEffect(() => {
     const handlePaymentMessage = (event: MessageEvent) => {
-      // Only accept messages from PayFast domain
-      if (!event.origin.includes('payfast')) return;
+      // Accept messages from PayFast domain or localhost (dev/sandbox)
+      const isValidOrigin = 
+        event.origin.includes('payfast') || 
+        event.origin.includes('localhost') ||
+        event.origin.includes('127.0.0.1');
+      
+      if (!isValidOrigin) return;
 
       if (event.data.type === 'payment_complete') {
         setIsProcessing(false);
@@ -75,7 +80,10 @@ export function PaymentForm({
             title: MSG_SUCCESS,
             description: `Payment of ${formatCentsToZAR(amountCents)} held in escrow`,
           });
-          onSuccess?.();
+          // Delay redirect to allow user to see success message
+          setTimeout(() => {
+            onSuccess?.();
+          }, 2000);
         } else {
           const errorMsg = event.data.error || MSG_ERROR;
           toast({

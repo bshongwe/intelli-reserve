@@ -57,8 +57,8 @@ export default function PaymentPage() {
   const service = services?.find((s) => s.id === booking?.serviceId);
 
   const handlePaymentSuccess = () => {
-    // Redirect to bookings page after successful payment
-    router.push('/dashboard/client/bookings');
+    // Redirect to bookings page with success indicator
+    router.push('/dashboard/client/bookings?payment_success=true');
   };
 
   if (bookingLoading) {

@@ -149,6 +149,8 @@ services:
       DB_USER: postgres
       DB_PASSWORD: postgres
       DB_NAME: intelli_reserve
+      PAYFAST_MERCHANT_ID: ${PAYFAST_MERCHANT_ID:-}
+      PAYFAST_MERCHANT_KEY: ${PAYFAST_MERCHANT_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -159,5 +161,20 @@ services:
       retries: 3
       start_period: 5s
 
+  notification-worker:
+    build:
+      context: .
+      dockerfile: backend/notification-worker/Dockerfile
+    container_name: intelli-notification-worker
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/intelli_reserve
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
+      FROM_EMAIL: ${FROM_EMAIL:-noreply@intellireserve.com}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   postgres_data:
+

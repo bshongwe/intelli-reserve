@@ -62,12 +62,16 @@ const (
 // EscrowServiceServer implements the EscrowService gRPC service
 type EscrowServiceServer struct {
 	pb.UnimplementedEscrowServiceServer
-	db *pgxpool.Pool
+	db                    *pgxpool.Pool
+	paymentGatewayClient  *PayFastClient
 }
 
 // NewEscrowServiceServer creates a new EscrowServiceServer
-func NewEscrowServiceServer(db *pgxpool.Pool) *EscrowServiceServer {
-	return &EscrowServiceServer{db: db}
+func NewEscrowServiceServer(db *pgxpool.Pool, paymentClient *PayFastClient) *EscrowServiceServer {
+	return &EscrowServiceServer{
+		db:                   db,
+		paymentGatewayClient: paymentClient,
+	}
 }
 
 // ============================================================================
@@ -246,14 +250,39 @@ func (s *EscrowServiceServer) CreateHold(ctx context.Context, req *pb.CreateHold
 
 	hostAmount := req.GrossAmountCents - req.PlatformFeeCents
 
+	// Process payment with PayFast payment gateway if client available
+	var paymentRef string
+	if s.paymentGatewayClient != nil {
+		log.Printf("💳 Processing payment hold with PayFast...")
+		paymentReq := &CreatePaymentHoldRequest{
+			Amount:           req.GrossAmountCents,
+			Description:      fmt.Sprintf("Booking %s - IntelliReserve Service", req.BookingId),
+			CustomerID:       req.ClientId,
+			CustomerEmail:    req.CustomerEmail,
+			BankAccountToken: req.BankAccountToken,
+		}
+
+		paymentResp, err := s.paymentGatewayClient.CreatePaymentHold(paymentReq)
+		if err != nil {
+			log.Printf("❌ Payment hold failed: %v", err)
+			return &pb.CreateHoldResponse{
+				Success:      false,
+				ErrorMessage: "payment_processing_failed",
+			}, status.Error(codes.Internal, fmt.Sprintf("Payment processing failed: %v", err))
+		}
+
+		paymentRef = paymentResp.ReferenceID
+		log.Printf("✅ Payment reference: %s", paymentRef)
+	}
+
 	// Insert hold
 	query := `
 		INSERT INTO escrow.escrow_holds (
 			id, booking_id, host_id, client_id, gross_amount, platform_fee, host_amount,
-			hold_status, hold_reason, created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, 'held', $8, $9, $10)
+			hold_status, hold_reason, payment_reference, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, 'held', $8, $9, $10, $11)
 		RETURNING id, booking_id, host_id, client_id, gross_amount, platform_fee, host_amount,
-		          hold_status, created_at, updated_at
+		          hold_status, payment_reference, created_at, updated_at
 	`
 
 	var hold pb.EscrowHold
@@ -265,15 +294,20 @@ func (s *EscrowServiceServer) CreateHold(ctx context.Context, req *pb.CreateHold
 
 	err = s.db.QueryRow(ctx, query,
 		holdID, req.BookingId, req.HostId, req.ClientId, req.GrossAmountCents,
-		req.PlatformFeeCents, hostAmount, req.HoldReason, now, now,
+		req.PlatformFeeCents, hostAmount, req.HoldReason, paymentRef, now, now,
 	).Scan(
 		&hold.Id, &hold.BookingId, &hold.HostId, &hold.ClientId,
 		&hold.GrossAmount.AmountCents, &hold.PlatformFee.AmountCents, &hold.HostAmount.AmountCents,
-		&hold.HoldStatus, &createdAtTime, &updatedAtTime,
+		&hold.HoldStatus, &hold.PaymentReference, &createdAtTime, &updatedAtTime,
 	)
 
 	if err != nil {
 		log.Printf(logDBError, err)
+		// If payment was created but DB insert failed, attempt to refund
+		if paymentRef != "" && s.paymentGatewayClient != nil {
+			log.Printf("⚠️ Database insert failed, refunding payment %s", paymentRef)
+			_ = s.paymentGatewayClient.RefundPayment(paymentRef, req.GrossAmountCents)
+		}
 		return &pb.CreateHoldResponse{
 			Success:      false,
 			ErrorMessage: errDatabaseFailure,

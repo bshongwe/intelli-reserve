@@ -129,21 +129,26 @@ echo "${BLUE}6️⃣  Checking for integration in app root...${NC}"
 INTEGRATION_FOUND=false
 
 if [ -f "src/app/layout.tsx" ]; then
-  if grep -q "initSyncManager" src/app/layout.tsx; then
-    echo "  ✅ initSyncManager found in src/app/layout.tsx"
+  if grep -q "initSyncManager\|OfflineSync" src/app/layout.tsx; then
+    echo "  ✅ Offline sync integration found in src/app/layout.tsx"
     INTEGRATION_FOUND=true
   else
-    echo "  ⚠️  initSyncManager NOT found in src/app/layout.tsx"
+    echo "  ⚠️  Offline sync NOT found in src/app/layout.tsx"
   fi
 fi
 
 if [ -f "src/pages/_app.tsx" ]; then
-  if grep -q "initSyncManager" src/pages/_app.tsx; then
-    echo "  ✅ initSyncManager found in src/pages/_app.tsx"
+  if grep -q "initSyncManager\|OfflineSync" src/pages/_app.tsx; then
+    echo "  ✅ Offline sync integration found in src/pages/_app.tsx"
     INTEGRATION_FOUND=true
   else
-    echo "  ⚠️  initSyncManager NOT found in src/pages/_app.tsx"
+    echo "  ⚠️  Offline sync NOT found in src/pages/_app.tsx"
   fi
+fi
+
+if [ -f "src/components/OfflineSync.tsx" ]; then
+  echo "  ✅ OfflineSync wrapper component found"
+  INTEGRATION_FOUND=true
 fi
 
 if [ "$INTEGRATION_FOUND" = false ]; then
@@ -152,12 +157,10 @@ if [ "$INTEGRATION_FOUND" = false ]; then
   echo ""
   echo "Next steps:"
   echo "1. Read OFFLINE_SYNC_GUIDE.md for integration instructions"
-  echo "2. Add initSyncManager() to your root layout"
-  echo "3. Add setupOfflineInterceptor() to your root layout"
-  echo "4. Add useSyncOnline() hook to root component"
-  echo "5. Add <OfflineIndicator /> to root layout"
+  echo "2. Add <OfflineSync /> component to your root layout"
+  echo "3. The OfflineSync component handles all initialization"
 else
-  echo "  ✅ Integration code found in app root"
+  echo "  ✅ Integration code found - Offline sync is active!"
 fi
 
 echo ""

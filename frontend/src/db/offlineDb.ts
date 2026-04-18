@@ -98,6 +98,7 @@ export class OfflineDb extends Dexie {
         updatedAt: new Date(),
       });
     }
+    return undefined;
   }
 
   /**

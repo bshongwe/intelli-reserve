@@ -71,6 +71,22 @@ func main() {
 
 	log.Printf("✅ Escrow Service connected to PostgreSQL DB")
 
+	// Initialize PayFast payment gateway client
+	paymentClient := &PayFastClient{
+		MerchantID:   os.Getenv("PAYFAST_MERCHANT_ID"),
+		MerchantKey:  os.Getenv("PAYFAST_MERCHANT_KEY"),
+		APIBase:      "https://api.payfast.co.za",
+		HTTPClient:   &http.Client{},
+		RetryCount:   3,
+		RetryBackoff: 2000, // 2 seconds in milliseconds
+	}
+
+	// If merchant ID is not set, log a warning (payment processing will be disabled)
+	if paymentClient.MerchantID == "" {
+		log.Printf("⚠️ PAYFAST_MERCHANT_ID not set - payment processing disabled")
+		paymentClient = nil
+	}
+
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
@@ -78,7 +94,7 @@ func main() {
 	go startHTTPServer()
 
 	// Start gRPC server
-	go startGRPCServer(conn)
+	go startGRPCServer(conn, paymentClient)
 
 	// Wait for shutdown signal
 	<-sigChan
@@ -107,14 +123,14 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // startGRPCServer starts the gRPC server
-func startGRPCServer(pool *pgxpool.Pool) {
+func startGRPCServer(pool *pgxpool.Pool, paymentClient *PayFastClient) {
 	listener, err := net.Listen("tcp", grpcPort)
 	if err != nil {
 		log.Fatalf("Failed to listen for gRPC: %v", err)
 	}
 
 	s := grpc.NewServer()
-	pb.RegisterEscrowServiceServer(s, NewEscrowServiceServer(pool))
+	pb.RegisterEscrowServiceServer(s, NewEscrowServiceServer(pool, paymentClient))
 
 	log.Printf("🚀 Escrow Service gRPC server running on %s", grpcPort)
 	if err := s.Serve(listener); err != nil {

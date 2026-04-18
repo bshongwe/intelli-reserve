@@ -75,8 +75,9 @@ message EscrowHold {
   string released_at = 9;
   string refunded_at = 10;
   string refund_reason = 11;
-  string created_at = 12;
-  string updated_at = 13;
+  string payment_reference = 12;  // PayFast payment reference ID
+  string created_at = 13;
+  string updated_at = 14;
 }
 
 // ============================================================================
@@ -141,6 +142,8 @@ message CreateHoldRequest {
   int64 gross_amount_cents = 4;
   int64 platform_fee_cents = 5;
   string hold_reason = 6;
+  string customer_email = 7;      // Customer email for payment processing
+  string bank_account_token = 8;  // Bank account token for PayFast
 }
 
 message CreateHoldResponse {

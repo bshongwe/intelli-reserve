@@ -19,8 +19,14 @@ graph TB
         AS["Analytics Service<br/>Go + gRPC<br/>Port: 8091<br/>- Revenue Trends<br/>- Occupancy Rates<br/>- Customer Stats"]
         IS["Inventory Service<br/>Go + gRPC<br/>Port: 8092<br/>- Time Slot Occupancy<br/>- Availability<br/>- Capacity Tracking"]
         SS["Services Service<br/>Go + gRPC<br/>Port: 8093<br/>- Service CRUD<br/>- Time Slot Management<br/>- Host Service Listings"]
-        NS["Notification Service<br/>Go + gRPC<br/>Port: 8094<br/>- Email<br/>- SMS<br/>- Push Notifications"]
+        NS["Notification Service<br/>Go + gRPC<br/>Port: 8094<br/>- Email Queueing<br/>- SMS<br/>- Push Notifications"]
         ES["Escrow Service<br/>Go + gRPC<br/>Port: 8096<br/>- Payment Holds<br/>- Fund Release<br/>- Payout Requests"]
+        NW["Notification Worker<br/>Go (Background)<br/>- SendGrid Integration<br/>- Email Sending<br/>- Batch Processing"]
+    end
+    
+    subgraph External["🌐 External Services"]
+        SG["SendGrid<br/>Email Service"]
+        PF["PayFast<br/>Payment Gateway<br/>(ZAR Payments)"]
     end
     
     subgraph Data["💾 Data Persistence Layer"]
@@ -40,10 +46,14 @@ graph TB
     SS -->|SQL| DB
     NS -->|SQL| DB
     ES -->|SQL| DB
+    NW -->|SQL| DB
+    ES -->|API| PF
+    NW -->|API| SG
     
     style Client fill:#e1f5ff
     style BFF fill:#f3e5f5
     style Services fill:#e8f5e9
+    style External fill:#fce4ec
     style Data fill:#fff3e0
 ```
 
@@ -96,8 +106,16 @@ graph TB
 | Inventory Service | 8082 | 8092 | ✅ Live |
 | Services Service | 8083 | 8093 | ✅ Live |
 | Notification Service | 8084 | 8094 | ✅ Live |
+| Notification Worker | — | — | ✅ Live (Background) |
 | Identity Service | 8085 | 8095 | ✅ Live |
 | Escrow Service | 8086 | 8096 | ✅ Live |
+
+### External Integrations
+
+| Service | Provider | Purpose | Status |
+|---------|----------|---------|--------|
+| Email Sending | SendGrid | Send email notifications via SMTP | ✅ Phase 2 |
+| Payment Processing | PayFast | Create/manage payment holds (ZAR) | ✅ Phase 4 |
 | Payout Service | 8087 | 8097 | 🔲 Planned |
 | Pricing Service | 8088 | 8098 | 🔲 Planned |
 
@@ -193,9 +211,24 @@ message Booking {
 **Data Ownership**: The services service is the authoritative owner of the `services` table and the slot definition layer of `time_slots`. Every booking and analytics query has a foreign key dependency on data this service manages.
 
 ### Notification Service
-**Responsibility**: Send communications to users across multiple channels
+**Responsibility**: Queue and manage communications to users across multiple channels
 
-**Core Methods**:
+**Notification Processing Flow**:
+```
+1. Booking Service/BFF → Notification Service.Send*() 
+   ↓
+2. Notification Service queues notification to database (status='pending')
+   ↓
+3. Notification Worker (background) polls database every 5 seconds
+   ↓
+4. Worker fetches pending notifications (batch size: 10)
+   ↓
+5. Worker sends via external provider (SendGrid for email)
+   ↓
+6. Update notification status (sent/failed, with retry logic)
+```
+
+**Core Methods** (Notification Service):
 - `SendBookingConfirmation(bookingId, clientEmail, serviceName, slotDate, startTime, hostId)` → SendNotificationResponse
 - `SendBookingCancellation(bookingId, clientEmail, serviceName, reason, hostId)` → SendNotificationResponse
 - `SendReminderNotification(bookingId, clientEmail, serviceName, hoursBeforeStart, hostId)` → SendNotificationResponse
@@ -203,8 +236,17 @@ message Booking {
 - `GetNotificationPreferences(userId)` → NotificationPreferences
 - `UpdateNotificationPreferences(userId, preferences)` → NotificationPreferences
 
+**Notification Worker** (Background Service):
+- Polls `notifications` table every 5 seconds for status='pending'
+- Fetches up to 10 notifications per batch
+- Sends via SendGrid email API
+- Updates status to 'sent' on success
+- Implements retry logic: max 3 attempts with exponential backoff
+- Updates status to 'failed' after exhausting retries
+- Logs all operations for debugging
+
 **Notification Channels**:
-- Email (primary)
+- Email (primary - via SendGrid)
 - SMS (optional)
 - Push notifications (optional)
 
@@ -234,14 +276,34 @@ message NotificationPreferences {
 - `notification_preferences` - User notification preferences (user_id, email_*, sms_*, push_*, timestamps)
 
 ### Escrow Service
-**Responsibility**: Manage payment holds, fund releases, and payout requests for secure transactions
+**Responsibility**: Manage payment holds, fund releases, and payout requests for secure transactions with PayFast payment gateway integration
+
+**Payment Processing Flow**:
+```
+1. Booking Service → Escrow.CreateHold(bookingId, clientId, amount)
+   ↓
+2. Escrow Service calls PayFast API to create payment hold
+   ↓
+3. PayFast returns payment reference ID
+   ↓
+4. Escrow Service stores payment reference in database
+   ↓
+5. Fund is held on customer's payment method
+   ↓
+6. On booking completion: Escrow.ReleaseHold() → PayFast API → Funds settle to host
+   ↓
+7. On booking cancellation: Escrow.RefundHold() → PayFast API → Funds returned to customer
+```
 
 **Core Methods**:
 - `GetEscrowAccount(hostId)` → EscrowAccount
-- `CreateHold(bookingId, hostId, clientId, grossAmountCents)` → Hold
+- `CreateHold(bookingId, hostId, clientId, grossAmountCents, customerEmail, bankAccountToken)` → Hold
+  - **Integration**: Calls PayFast API to create payment hold, stores payment_reference
 - `GetHold(holdId)` → Hold
 - `ReleaseHold(holdId)` → Hold (Release funds to available balance)
+  - **Integration**: Calls PayFast API to complete/release payment
 - `RefundHold(holdId, reason)` → Hold (Return funds to client)
+  - **Integration**: Calls PayFast API to refund payment hold
 - `GetAvailableBalance(hostId)` → Money
 - `RequestPayout(hostId, amountCents, bankAccountToken)` → Payout
 - `GetPayoutHistory(hostId, limit, offset)` → []Payout
@@ -249,6 +311,18 @@ message NotificationPreferences {
 - `ConfirmPayout(payoutId)` → Payout
 - `RejectPayout(payoutId, reason)` → Payout
 - `HandleDisputeRequest(holdId, reason)` → Dispute
+
+**Payment Gateway: PayFast**
+- **Provider**: PayFast (South Africa payment processor)
+- **API Base**: https://api.payfast.co.za
+- **Authentication**: Merchant ID + Merchant Key with MD5 signature validation
+- **Retry Logic**: 3 attempts with 2-second exponential backoff
+- **Currency**: ZAR (South African Rand), amounts in cents
+- **Features Implemented**:
+  - Create payment holds (payment_gateway.CreatePaymentHold)
+  - Release payment holds (payment_gateway.ReleasePaymentHold)
+  - Refund payment holds (payment_gateway.RefundPayment)
+  - Check payment status (payment_gateway.CheckPaymentStatus)
 
 **Data Models**:
 ```protobuf
@@ -274,8 +348,9 @@ message Hold {
   Money platform_fee = 7;
   Money host_amount = 8;
   string hold_reason = 9;
-  string created_at = 10;
-  string updated_at = 11;
+  string payment_reference = 10;    // PayFast transaction reference ID
+  string created_at = 11;
+  string updated_at = 12;
 }
 
 message Payout {
@@ -311,8 +386,9 @@ message Money {
 
 **Database Tables**:
 - `escrow_accounts` - Host escrow balances (id, host_id, held_balance_cents, available_balance_cents, total_received_cents, total_paid_out_cents, account_status, timestamps)
-- `holds` - Payment holds (id, booking_id, host_id, client_id, status, gross_amount_cents, platform_fee_cents, host_amount_cents, hold_reason, timestamps)
+- `escrow_holds` - Payment holds with PayFast reference (id, booking_id, host_id, client_id, status, gross_amount_cents, platform_fee_cents, host_amount_cents, hold_reason, **payment_reference**, timestamps)
 - `payouts` - Payout requests (id, host_id, amount_cents, status, bank_account_token, timestamps)
+- `notifications` - Notification queue (id, recipient_id, notification_type, channel, subject, message, recipient_email, **status**, sent_at, failed_at, timestamps)
 - `transactions` - Audit log (id, host_id, transaction_type, amount_cents, balance_before_cents, balance_after_cents, reason, hold_id, payout_id, created_at)
 
 **Indexes**:
@@ -677,10 +753,79 @@ graph TB
 - [ ] Customer reviews & ratings
 - [ ] Admin dashboard
 - [ ] Notification channels (SendGrid email, Twilio SMS, Firebase push)
-- [ ] JWT token implementation (currently scaffolded)
 - [ ] mTLS between services
 - [ ] Event-driven architecture (Kafka/RabbitMQ) for async flows
 - [ ] Advanced analytics (ML-based forecasting)
+
+## Critical Issues Discovered (April 2026)
+
+### 🔴 Severity: CRITICAL
+
+1. **Error Handling is Broken**
+   - Status: All gRPC errors map to HTTP 500
+   - Impact: Frontend cannot distinguish 404 (not found) from 500 (error)
+   - Fix: Implement error code mapping middleware
+   - See: `docs/IMPLEMENTATION_ROADMAP.md` Phase 1
+
+2. **No Email Notifications Being Sent**
+   - Status: Notifications stored in DB with `status='pending'` forever
+   - Impact: Users don't receive booking confirmations, payment notifications, etc.
+   - Fix: Implement notification worker service with SendGrid integration
+   - See: `docs/IMPLEMENTATION_ROADMAP.md` Phase 2
+
+3. **No Payment Processing**
+   - Status: CreateHold only stores to DB, no actual payment charge
+   - Impact: Hosts complete work but never get paid; system is exploitable
+   - Fix: Integrate payment gateway (PayFast recommended for ZAR)
+   - See: `docs/IMPLEMENTATION_ROADMAP.md` Phase 4
+
+### 🟠 Severity: HIGH
+
+4. **Refresh Tokens Not Implemented**
+   - Status: Access tokens only (1-hour expiry)
+   - Impact: Users must re-login every hour
+   - Fix: Add RefreshToken RPC method to Identity Service
+
+5. **Email Verification Not Enforced**
+   - Status: Users can signup with any email, no verification
+   - Impact: Spam users, fake hosts, credential theft
+   - Fix: Implement email verification flow, block operations until verified
+
+### 🟡 Severity: MEDIUM
+
+6. **No Soft Deletes**
+   - Status: DELETE operations are hard deletes
+   - Impact: Cannot recover accidentally deleted data; audit trails incomplete
+   - Fix: Add `deleted_at` columns, filter queries accordingly
+
+7. **Synchronous Architecture**
+   - Status: All operations are request-response (no event streams)
+   - Impact: Cannot scale notifications, difficult to debug issues
+   - Fix: Implement event-driven architecture (Redis Streams or RabbitMQ)
+
+## What's Working Well ✅
+
+- Three-tier architecture (Frontend → BFF → Microservices)
+- gRPC between BFF and microservices (95% adoption)
+- Escrow service design and implementation
+- JWT token generation (1-hour expiry tokens)
+- Identity Service with bcrypt password hashing
+- Database schema with proper foreign keys and constraints
+- Docker & Kubernetes infrastructure setup
+
+## Implementation Priority
+
+**Do these first** (in order):
+1. Error code mapping (3-5 days) — unblocks all frontend development
+2. Email notification worker (5-7 days) — users can see booking status
+3. Payment gateway (10-14 days) — enables real transactions
+4. Refresh tokens (1-2 days) — improves UX
+5. Email verification (2-3 days) — prevents spam
+
+**Complete timeline**: ~4 weeks to production-ready
+
+For detailed implementation plan, see: `docs/IMPLEMENTATION_ROADMAP.md`
+For codebase validation details, see: `docs/CODEBASE_VALIDATION_ANALYSIS.md`
 
 ## References
 
@@ -688,3 +833,5 @@ graph TB
 - Database Schema: `/backend/migrations/`
 - Kubernetes Manifests: `/infra/kubernetes/`
 - ADRs: `/docs/ADRs/`
+- Implementation Roadmap: `/docs/IMPLEMENTATION_ROADMAP.md`
+- Codebase Validation: `/docs/CODEBASE_VALIDATION_ANALYSIS.md`

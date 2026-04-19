@@ -14,6 +14,9 @@ service EscrowService {
   rpc CreateHold(CreateHoldRequest) returns (CreateHoldResponse);
   rpc GetHold(GetHoldRequest) returns (GetHoldResponse);
   rpc GetHoldsByBookingId(GetHoldsByBookingIdRequest) returns (GetHoldsByBookingIdResponse);
+  rpc GetHoldsByClientId(GetHoldsByClientIdRequest) returns (GetHoldsByClientIdResponse);
+  rpc GetHoldsByHostId(GetHoldsByHostIdRequest) returns (GetHoldsByHostIdResponse);
+  rpc GetAllHolds(GetAllHoldsRequest) returns (GetAllHoldsResponse);
   rpc ReleaseHold(ReleaseHoldRequest) returns (ReleaseHoldResponse);
   rpc RefundHold(RefundHoldRequest) returns (RefundHoldResponse);
   
@@ -171,6 +174,45 @@ message GetHoldsByBookingIdResponse {
   bool success = 1;
   string error_message = 2;
   repeated EscrowHold holds = 3;
+}
+
+message GetHoldsByClientIdRequest {
+  string client_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message GetHoldsByClientIdResponse {
+  bool success = 1;
+  string error_message = 2;
+  repeated EscrowHold holds = 3;
+  int32 total_count = 4;
+}
+
+message GetHoldsByHostIdRequest {
+  string host_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message GetHoldsByHostIdResponse {
+  bool success = 1;
+  string error_message = 2;
+  repeated EscrowHold holds = 3;
+  int32 total_count = 4;
+}
+
+message GetAllHoldsRequest {
+  int32 limit = 1;
+  int32 offset = 2;
+  string status_filter = 3; // optional: "held", "released", "refunded", or empty for all
+}
+
+message GetAllHoldsResponse {
+  bool success = 1;
+  string error_message = 2;
+  repeated EscrowHold holds = 3;
+  int32 total_count = 4;
 }
 
 message ReleaseHoldRequest {

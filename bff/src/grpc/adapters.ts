@@ -360,6 +360,30 @@ export const EscrowServiceAdapter = {
     });
   },
 
+  async getHoldsByClientId(clientId: string, limit: number = 100, offset: number = 0) {
+    return await escrowService.getHoldsByClientId({
+      client_id: clientId,
+      limit,
+      offset,
+    });
+  },
+
+  async getHoldsByHostId(hostId: string, limit: number = 100, offset: number = 0) {
+    return await escrowService.getHoldsByHostId({
+      host_id: hostId,
+      limit,
+      offset,
+    });
+  },
+
+  async getAllHolds(limit: number = 100, offset: number = 0, statusFilter: string = '') {
+    return await escrowService.getAllHolds({
+      limit,
+      offset,
+      status_filter: statusFilter,
+    });
+  },
+
   async releaseHold(holdId: string, hostId: string) {
     return await escrowService.releaseHold({
       hold_id: holdId,

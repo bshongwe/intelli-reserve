@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Calendar, BarChart3, LogOut, Zap, Settings, Briefcase, User, Home, Search } from "lucide-react";
+import { Calendar, BarChart3, LogOut, Zap, Settings, Briefcase, User, Home, Search, Vault } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
@@ -10,6 +10,8 @@ import { useAuth } from "@/lib/auth-context";
 const hostNavItems = [
   { href: "/dashboard/host", icon: Home, label: "Dashboard" },
   { href: "/dashboard/host/services", icon: Briefcase, label: "My Services" },
+  { href: "/dashboard/host/escrow", icon: Vault, label: "My Escrow" },
+  { href: "/dashboard/escrow", icon: Vault, label: "All Payments" },
   { href: "/dashboard/analytics", icon: BarChart3, label: "Analytics" },
   { href: "/dashboard/profile", icon: User, label: "Profile" },
   { href: "/dashboard/host/settings", icon: Settings, label: "Settings" },
@@ -19,6 +21,7 @@ const clientNavItems = [
   { href: "/dashboard/client", icon: Home, label: "Dashboard" },
   { href: "/dashboard/book", icon: Search, label: "Book a Service" },
   { href: "/dashboard/client/bookings", icon: Calendar, label: "My Bookings" },
+  { href: "/dashboard/escrow", icon: Vault, label: "Payments" },
   { href: "/dashboard/profile", icon: User, label: "Profile" },
   { href: "/dashboard/client/settings", icon: Settings, label: "Settings" },
 ];

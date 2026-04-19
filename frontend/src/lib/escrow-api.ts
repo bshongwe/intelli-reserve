@@ -24,11 +24,13 @@ export interface Hold {
   bookingId: string;
   hostId: string;
   clientId: string;
-  status: 'pending' | 'released' | 'refunded';
+  status: 'held' | 'released' | 'refunded';
   grossAmountCents: number;
   platformFeeCents: number;
   hostAmountCents: number;
-  holdReason: string;
+  releasedAt?: string;
+  refundedAt?: string;
+  paymentReference?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -235,6 +237,57 @@ export async function getHold(holdId: string): Promise<Hold> {
   } catch (error) {
     console.error('[Escrow API] Error fetching hold:', error);
     throw new Error(error instanceof Error ? error.message : ERROR_FETCH_HOLD);
+  }
+}
+
+export async function getClientHolds(
+  clientId: string,
+  limit: number = 100,
+  offset: number = 0
+): Promise<{ holds: Hold[]; total_count: number }> {
+  try {
+    const url = `${ESCROW_API_BASE}${ENDPOINT_HOLDS}/client/${clientId}?limit=${limit}&offset=${offset}`;
+    const response = await fetchWithAuth(url);
+    const data = await parseResponse<ApiResponse<{ holds: Hold[]; total_count: number }>>(response);
+    
+    if (!data.holds) {
+      throw new Error(ERROR_INVALID_RESPONSE);
+    }
+    
+    return {
+      holds: data.holds,
+      total_count: data.total_count || 0,
+    };
+  } catch (error) {
+    console.error('[Escrow API] Error fetching client holds:', error);
+    throw new Error(error instanceof Error ? error.message : 'Failed to fetch client holds');
+  }
+}
+
+export async function getAllHolds(
+  limit: number = 100,
+  offset: number = 0,
+  statusFilter: string = ''
+): Promise<{ holds: Hold[]; total_count: number }> {
+  try {
+    let url = `${ESCROW_API_BASE}${ENDPOINT_HOLDS}/all?limit=${limit}&offset=${offset}`;
+    if (statusFilter) {
+      url += `&status=${encodeURIComponent(statusFilter)}`;
+    }
+    const response = await fetchWithAuth(url);
+    const data = await parseResponse<ApiResponse<{ holds: Hold[]; total_count: number }>>(response);
+    
+    if (!data.holds) {
+      throw new Error(ERROR_INVALID_RESPONSE);
+    }
+    
+    return {
+      holds: data.holds,
+      total_count: data.total_count || 0,
+    };
+  } catch (error) {
+    console.error('[Escrow API] Error fetching all holds:', error);
+    throw new Error(error instanceof Error ? error.message : 'Failed to fetch all holds');
   }
 }
 

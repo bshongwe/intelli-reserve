@@ -522,6 +522,330 @@ func (s *EscrowServiceServer) GetHoldsByBookingId(ctx context.Context, req *pb.G
 }
 
 // ============================================================================
+// RPC METHOD: GetHoldsByClientId
+// ============================================================================
+
+// GetHoldsByClientId retrieves all holds for a specific client with pagination
+func (s *EscrowServiceServer) GetHoldsByClientId(ctx context.Context, req *pb.GetHoldsByClientIdRequest) (*pb.GetHoldsByClientIdResponse, error) {
+	if req.ClientId == "" {
+		return &pb.GetHoldsByClientIdResponse{
+			Success:      false,
+			ErrorMessage: errMissingRequired,
+		}, status.Error(codes.InvalidArgument, errMissingRequired)
+	}
+
+	// Get total count first
+	countQuery := `SELECT COUNT(*) FROM escrow.escrow_holds WHERE client_id = $1`
+	var totalCount int32
+	err := s.db.QueryRow(ctx, countQuery, req.ClientId).Scan(&totalCount)
+	if err != nil {
+		log.Printf("[Escrow Service] Error counting holds for client %s: %v", req.ClientId, err)
+		return &pb.GetHoldsByClientIdResponse{
+			Success:      false,
+			ErrorMessage: "Failed to count holds",
+		}, status.Error(codes.Internal, "Failed to count holds")
+	}
+
+	// Set default and max limits
+	limit := req.Limit
+	if limit <= 0 {
+		limit = 100
+	}
+	if limit > 1000 {
+		limit = 1000
+	}
+
+	offset := req.Offset
+	if offset < 0 {
+		offset = 0
+	}
+
+	query := `
+		SELECT id, booking_id, host_id, client_id, gross_amount, platform_fee, host_amount,
+		       hold_status, released_at, refunded_at, created_at, updated_at
+		FROM escrow.escrow_holds WHERE client_id = $1
+		ORDER BY created_at DESC
+		LIMIT $2 OFFSET $3
+	`
+
+	rows, err := s.db.Query(ctx, query, req.ClientId, limit, offset)
+	if err != nil {
+		log.Printf("[Escrow Service] Error querying holds for client %s: %v", req.ClientId, err)
+		return &pb.GetHoldsByClientIdResponse{
+			Success:      false,
+			ErrorMessage: "Failed to query holds",
+		}, status.Error(codes.Internal, "Failed to query holds")
+	}
+	defer rows.Close()
+
+	var holds []*pb.EscrowHold
+
+	for rows.Next() {
+		var hold pb.EscrowHold
+		// Initialize Money structs to avoid nil pointer dereference
+		hold.GrossAmount = &pb.Money{}
+		hold.PlatformFee = &pb.Money{}
+		hold.HostAmount = &pb.Money{}
+		var createdAtTime, updatedAtTime time.Time
+		var releasedAt, refundedAt *time.Time
+
+		err := rows.Scan(
+			&hold.Id, &hold.BookingId, &hold.HostId, &hold.ClientId,
+			&hold.GrossAmount.AmountCents, &hold.PlatformFee.AmountCents, &hold.HostAmount.AmountCents,
+			&hold.HoldStatus, &releasedAt, &refundedAt, &createdAtTime, &updatedAtTime,
+		)
+
+		if err != nil {
+			log.Printf("[Escrow Service] Error scanning hold row: %v", err)
+			continue
+		}
+
+		hold.CreatedAt = createdAtTime.Format(time.RFC3339)
+		hold.UpdatedAt = updatedAtTime.Format(time.RFC3339)
+		if releasedAt != nil {
+			hold.ReleasedAt = releasedAt.Format(time.RFC3339)
+		}
+		if refundedAt != nil {
+			hold.RefundedAt = refundedAt.Format(time.RFC3339)
+		}
+
+		holds = append(holds, &hold)
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Printf("[Escrow Service] Error iterating hold rows: %v", err)
+		return &pb.GetHoldsByClientIdResponse{
+			Success:      false,
+			ErrorMessage: "Failed to retrieve holds",
+		}, status.Error(codes.Internal, "Failed to retrieve holds")
+	}
+
+	return &pb.GetHoldsByClientIdResponse{
+		Success:    true,
+		Holds:      holds,
+		TotalCount: totalCount,
+	}, nil
+}
+
+// ============================================================================
+// RPC METHOD: GetHoldsByHostId
+// ============================================================================
+
+// GetHoldsByHostId retrieves all holds for a specific host with pagination
+func (s *EscrowServiceServer) GetHoldsByHostId(ctx context.Context, req *pb.GetHoldsByHostIdRequest) (*pb.GetHoldsByHostIdResponse, error) {
+	if req.HostId == "" {
+		return &pb.GetHoldsByHostIdResponse{
+			Success:      false,
+			ErrorMessage: errMissingRequired,
+		}, status.Error(codes.InvalidArgument, errMissingRequired)
+	}
+
+	// Get total count first
+	countQuery := `SELECT COUNT(*) FROM escrow.escrow_holds WHERE host_id = $1`
+	var totalCount int32
+	err := s.db.QueryRow(ctx, countQuery, req.HostId).Scan(&totalCount)
+	if err != nil {
+		log.Printf("[Escrow Service] Error counting holds for host %s: %v", req.HostId, err)
+		return &pb.GetHoldsByHostIdResponse{
+			Success:      false,
+			ErrorMessage: "Failed to count holds",
+		}, status.Error(codes.Internal, "Failed to count holds")
+	}
+
+	// Set default and max limits
+	limit := req.Limit
+	if limit <= 0 {
+		limit = 100
+	}
+	if limit > 1000 {
+		limit = 1000
+	}
+
+	offset := req.Offset
+	if offset < 0 {
+		offset = 0
+	}
+
+	query := `
+		SELECT id, booking_id, host_id, client_id, gross_amount, platform_fee, host_amount,
+		       hold_status, released_at, refunded_at, created_at, updated_at
+		FROM escrow.escrow_holds WHERE host_id = $1
+		ORDER BY created_at DESC
+		LIMIT $2 OFFSET $3
+	`
+
+	rows, err := s.db.Query(ctx, query, req.HostId, limit, offset)
+	if err != nil {
+		log.Printf("[Escrow Service] Error querying holds for host %s: %v", req.HostId, err)
+		return &pb.GetHoldsByHostIdResponse{
+			Success:      false,
+			ErrorMessage: "Failed to query holds",
+		}, status.Error(codes.Internal, "Failed to query holds")
+	}
+	defer rows.Close()
+
+	var holds []*pb.EscrowHold
+
+	for rows.Next() {
+		var hold pb.EscrowHold
+		// Initialize Money structs to avoid nil pointer dereference
+		hold.GrossAmount = &pb.Money{}
+		hold.PlatformFee = &pb.Money{}
+		hold.HostAmount = &pb.Money{}
+		var createdAtTime, updatedAtTime time.Time
+		var releasedAt, refundedAt *time.Time
+
+		err := rows.Scan(
+			&hold.Id, &hold.BookingId, &hold.HostId, &hold.ClientId,
+			&hold.GrossAmount.AmountCents, &hold.PlatformFee.AmountCents, &hold.HostAmount.AmountCents,
+			&hold.HoldStatus, &releasedAt, &refundedAt, &createdAtTime, &updatedAtTime,
+		)
+
+		if err != nil {
+			log.Printf("[Escrow Service] Error scanning hold row: %v", err)
+			continue
+		}
+
+		hold.CreatedAt = createdAtTime.Format(time.RFC3339)
+		hold.UpdatedAt = updatedAtTime.Format(time.RFC3339)
+		if releasedAt != nil {
+			hold.ReleasedAt = releasedAt.Format(time.RFC3339)
+		}
+		if refundedAt != nil {
+			hold.RefundedAt = refundedAt.Format(time.RFC3339)
+		}
+		hold.GrossAmount.Currency = "ZAR"
+		hold.PlatformFee.Currency = "ZAR"
+		hold.HostAmount.Currency = "ZAR"
+
+		holds = append(holds, &hold)
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Printf("[Escrow Service] Error iterating hold rows: %v", err)
+		return &pb.GetHoldsByHostIdResponse{
+			Success:      false,
+			ErrorMessage: "Failed to retrieve holds",
+		}, status.Error(codes.Internal, "Failed to retrieve holds")
+	}
+
+	return &pb.GetHoldsByHostIdResponse{
+		Success:    true,
+		Holds:      holds,
+		TotalCount: totalCount,
+	}, nil
+}
+
+// ============================================================================
+// RPC METHOD: GetAllHolds
+// ============================================================================
+
+// GetAllHolds retrieves all holds across the system with optional status filtering and pagination
+func (s *EscrowServiceServer) GetAllHolds(ctx context.Context, req *pb.GetAllHoldsRequest) (*pb.GetAllHoldsResponse, error) {
+	// Build the base query with optional status filter
+	statusFilter := ""
+	if req.StatusFilter != "" && req.StatusFilter != "all" {
+		statusFilter = fmt.Sprintf(" AND hold_status = '%s'", req.StatusFilter)
+	}
+
+	// Get total count first
+	countQuery := fmt.Sprintf(`SELECT COUNT(*) FROM escrow.escrow_holds WHERE 1=1%s`, statusFilter)
+	var totalCount int32
+	err := s.db.QueryRow(ctx, countQuery).Scan(&totalCount)
+	if err != nil {
+		log.Printf("[Escrow Service] Error counting all holds: %v", err)
+		return &pb.GetAllHoldsResponse{
+			Success:      false,
+			ErrorMessage: "Failed to count holds",
+		}, status.Error(codes.Internal, "Failed to count holds")
+	}
+
+	// Set default and max limits
+	limit := req.Limit
+	if limit <= 0 {
+		limit = 100
+	}
+	if limit > 1000 {
+		limit = 1000
+	}
+
+	offset := req.Offset
+	if offset < 0 {
+		offset = 0
+	}
+
+	// Query all holds with optional status filter
+	query := fmt.Sprintf(`
+		SELECT id, booking_id, host_id, client_id, gross_amount, platform_fee, host_amount,
+		       hold_status, released_at, refunded_at, created_at, updated_at
+		FROM escrow.escrow_holds WHERE 1=1%s
+		ORDER BY created_at DESC
+		LIMIT $1 OFFSET $2
+	`, statusFilter)
+
+	rows, err := s.db.Query(ctx, query, limit, offset)
+	if err != nil {
+		log.Printf("[Escrow Service] Error querying all holds: %v", err)
+		return &pb.GetAllHoldsResponse{
+			Success:      false,
+			ErrorMessage: "Failed to query holds",
+		}, status.Error(codes.Internal, "Failed to query holds")
+	}
+	defer rows.Close()
+
+	var holds []*pb.EscrowHold
+
+	for rows.Next() {
+		var hold pb.EscrowHold
+		// Initialize Money structs to avoid nil pointer dereference
+		hold.GrossAmount = &pb.Money{}
+		hold.PlatformFee = &pb.Money{}
+		hold.HostAmount = &pb.Money{}
+		var createdAtTime, updatedAtTime time.Time
+		var releasedAt, refundedAt *time.Time
+
+		err := rows.Scan(
+			&hold.Id, &hold.BookingId, &hold.HostId, &hold.ClientId,
+			&hold.GrossAmount.AmountCents, &hold.PlatformFee.AmountCents, &hold.HostAmount.AmountCents,
+			&hold.HoldStatus, &releasedAt, &refundedAt, &createdAtTime, &updatedAtTime,
+		)
+
+		if err != nil {
+			log.Printf("[Escrow Service] Error scanning hold row: %v", err)
+			continue
+		}
+
+		hold.CreatedAt = createdAtTime.Format(time.RFC3339)
+		hold.UpdatedAt = updatedAtTime.Format(time.RFC3339)
+		if releasedAt != nil {
+			hold.ReleasedAt = releasedAt.Format(time.RFC3339)
+		}
+		if refundedAt != nil {
+			hold.RefundedAt = refundedAt.Format(time.RFC3339)
+		}
+		hold.GrossAmount.Currency = "ZAR"
+		hold.PlatformFee.Currency = "ZAR"
+		hold.HostAmount.Currency = "ZAR"
+
+		holds = append(holds, &hold)
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Printf("[Escrow Service] Error iterating hold rows: %v", err)
+		return &pb.GetAllHoldsResponse{
+			Success:      false,
+			ErrorMessage: "Failed to retrieve holds",
+		}, status.Error(codes.Internal, "Failed to retrieve holds")
+	}
+
+	return &pb.GetAllHoldsResponse{
+		Success:    true,
+		Holds:      holds,
+		TotalCount: totalCount,
+	}, nil
+}
+
+// ============================================================================
 // RPC METHOD: ReleaseHold
 // ============================================================================
 

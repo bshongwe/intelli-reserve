@@ -4,9 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, CreditCard, Clock, CheckCircle2, Search, ArrowRight, ShieldCheck } from "lucide-react";
+import { Calendar, Clock, CheckCircle2, Search, ArrowRight, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { bookingsAPI, servicesAPI } from "@/lib/api";
+import { ClientEscrowBalance } from "@/components/ClientEscrowBalance";
 
 export default function ClientDashboard() {
   const { user } = useAuth();
@@ -140,15 +141,7 @@ export default function ClientDashboard() {
                 </p>
               </div>
             </div>
-            <div className="flex items-start gap-3 p-4 rounded-xl bg-muted/40 border border-border">
-              <CreditCard className="w-5 h-5 text-muted-foreground shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-semibold">Escrow Balance</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Detailed escrow tracking coming soon.
-                </p>
-              </div>
-            </div>
+            <ClientEscrowBalance />
           </CardContent>
         </Card>
       </div>

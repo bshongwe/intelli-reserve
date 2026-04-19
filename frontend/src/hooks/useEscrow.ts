@@ -70,6 +70,32 @@ export function useHold(holdId: string, enabled: boolean = true) {
 }
 
 /**
+ * Fetch all holds for a client
+ */
+export function useClientHolds(clientId: string, enabled: boolean = true, limit: number = 100, offset: number = 0) {
+  return useQuery({
+    queryKey: [QUERY_KEY_HOLD, 'client', clientId, limit, offset],
+    queryFn: () => escrowApi.getClientHolds(clientId, limit, offset),
+    enabled,
+    staleTime: STALE_TIME_BALANCE,
+    retry: 2,
+  });
+}
+
+/**
+ * Fetch all holds across the system
+ */
+export function useAllHolds(enabled: boolean = true, limit: number = 100, offset: number = 0, statusFilter: string = '') {
+  return useQuery({
+    queryKey: [QUERY_KEY_HOLD, 'all', limit, offset, statusFilter],
+    queryFn: () => escrowApi.getAllHolds(limit, offset, statusFilter),
+    enabled,
+    staleTime: STALE_TIME_BALANCE,
+    retry: 2,
+  });
+}
+
+/**
  * Release a hold
  */
 export function useReleaseHold() {

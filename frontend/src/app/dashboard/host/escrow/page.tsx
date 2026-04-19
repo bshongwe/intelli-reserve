@@ -7,6 +7,7 @@ import { EscrowBalance } from '@/components/EscrowBalance';
 import { PayoutRequestForm } from '@/components/PayoutRequestForm';
 import { PayoutHistory } from '@/components/PayoutHistory';
 import { TransactionHistory } from '@/components/TransactionHistory';
+import { HostHoldsTable } from '@/components/HostHoldsTable';
 import { useEscrowBalance } from '@/hooks/useEscrow';
 
 // ============================================================================
@@ -123,6 +124,15 @@ export default function HostEscrowDashboard() {
             </p>
           </CardContent>
         </Card>
+
+        {/* Escrow Holds Table */}
+        <section className="space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold">Payment Holds</h2>
+            <p className="text-sm text-muted-foreground">All escrow holds for your bookings</p>
+          </div>
+          <HostHoldsTable hostId={hostId} pageSize={10} />
+        </section>
       </div>
     </div>
   );

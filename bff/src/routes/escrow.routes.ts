@@ -14,6 +14,7 @@ const MSG_HOLD_CREATED = 'Escrow hold created successfully';
 const MSG_HOLD_RETRIEVED = 'Escrow hold retrieved successfully';
 const MSG_HOLD_RELEASED = 'Escrow hold released successfully';
 const MSG_HOLD_REFUNDED = 'Escrow hold refunded successfully';
+const MSG_HOLDS_RETRIEVED = 'Escrow holds retrieved successfully';
 const MSG_ACCOUNT_RETRIEVED = 'Escrow account retrieved successfully';
 const MSG_PAYOUT_REQUESTED = 'Payout requested successfully';
 const MSG_PAYOUT_STATUS = 'Payout status retrieved successfully';
@@ -23,6 +24,7 @@ const MSG_DISPUTE_OPENED = 'Dispute opened successfully';
 const MSG_DISPUTE_STATUS = 'Dispute status retrieved successfully';
 const MSG_ERROR_CREATING_HOLD = 'Failed to create escrow hold';
 const MSG_ERROR_RETRIEVING_HOLD = 'Failed to retrieve escrow hold';
+const MSG_ERROR_RETRIEVING_HOLDS = 'Failed to retrieve escrow holds';
 const MSG_ERROR_RELEASING_HOLD = 'Failed to release escrow hold';
 const MSG_ERROR_REFUNDING_HOLD = 'Failed to refund escrow hold';
 const MSG_ERROR_RETRIEVING_ACCOUNT = 'Failed to retrieve escrow account';
@@ -125,8 +127,155 @@ router.get('/holds', async (req, res) => {
 });
 
 /**
+ * GET /api/escrow/holds/all
+ * Retrieve all holds across the system with optional status filter
+ * NOTE: Must be defined BEFORE /holds/:holdId to avoid route collision
+ */
+router.get('/holds/all', async (req, res) => {
+  try {
+    const { limit = '100', offset = '0', status = '' } = req.query;
+    
+    const limitNum = Number.parseInt(limit as string, 10);
+    const offsetNum = Number.parseInt(offset as string, 10);
+    
+    if (Number.isNaN(limitNum) || Number.isNaN(offsetNum) || limitNum < 0 || offsetNum < 0) {
+      return res.status(400).json({ error: MSG_VALIDATION_FAILED });
+    }
+    
+    const response = await EscrowServiceAdapter.getAllHolds(limitNum, offsetNum, (status as string) || '');
+    
+    // Transform gRPC response to frontend schema
+    const transformedHolds = (response.holds || []).map((hold: any) => ({
+      id: hold.id,
+      bookingId: hold.booking_id,
+      hostId: hold.host_id,
+      clientId: hold.client_id,
+      status: hold.hold_status,  // Map hold_status → status
+      grossAmountCents: Number(hold.gross_amount?.amount_cents) || 0,  // Convert to number
+      platformFeeCents: Number(hold.platform_fee?.amount_cents) || 0,
+      hostAmountCents: Number(hold.host_amount?.amount_cents) || 0,
+      releasedAt: hold.released_at,
+      refundedAt: hold.refunded_at,
+      paymentReference: hold.payment_reference,
+      createdAt: hold.created_at,
+      updatedAt: hold.updated_at,
+    }));
+    
+    res.json({
+      message: MSG_HOLDS_RETRIEVED,
+      holds: transformedHolds,
+      total_count: response.total_count || 0,
+    });
+  } catch (error: any) {
+    console.error('[Escrow Routes] Error retrieving all holds:', error);
+    res.status(500).json({ error: MSG_ERROR_RETRIEVING_HOLDS, details: error.message });
+  }
+});
+
+/**
+ * GET /api/escrow/holds/client/:clientId
+ * Retrieve all holds for a specific client
+ */
+router.get('/holds/client/:clientId', async (req, res) => {
+  try {
+    const { clientId } = req.params;
+    const { limit = '100', offset = '0' } = req.query;
+    
+    if (!clientId) {
+      return res.status(400).json({ error: MSG_MISSING_PARAM });
+    }
+    
+    const limitNum = Number.parseInt(limit as string, 10);
+    const offsetNum = Number.parseInt(offset as string, 10);
+    
+    if (Number.isNaN(limitNum) || Number.isNaN(offsetNum) || limitNum < 0 || offsetNum < 0) {
+      return res.status(400).json({ error: MSG_VALIDATION_FAILED });
+    }
+    
+    const response = await EscrowServiceAdapter.getHoldsByClientId(clientId, limitNum, offsetNum);
+    
+    // Transform gRPC response to frontend schema
+    const transformedHolds = (response.holds || []).map((hold: any) => ({
+      id: hold.id,
+      bookingId: hold.booking_id,
+      hostId: hold.host_id,
+      clientId: hold.client_id,
+      status: hold.hold_status,  // Map hold_status → status
+      grossAmountCents: Number(hold.gross_amount?.amount_cents) || 0,  // Convert to number
+      platformFeeCents: Number(hold.platform_fee?.amount_cents) || 0,
+      hostAmountCents: Number(hold.host_amount?.amount_cents) || 0,
+      releasedAt: hold.released_at,
+      refundedAt: hold.refunded_at,
+      paymentReference: hold.payment_reference,
+      createdAt: hold.created_at,
+      updatedAt: hold.updated_at,
+    }));
+    
+    res.json({
+      message: MSG_HOLDS_RETRIEVED,
+      holds: transformedHolds,
+      total_count: response.total_count || 0,
+    });
+  } catch (error: any) {
+    console.error('[Escrow Routes] Error retrieving client holds:', error);
+    res.status(500).json({ error: MSG_ERROR_RETRIEVING_HOLDS, details: error.message });
+  }
+});
+
+/**
+ * GET /api/escrow/holds/host/:hostId
+ * Retrieve all holds for a specific host
+ */
+router.get('/holds/host/:hostId', async (req, res) => {
+  try {
+    const { hostId } = req.params;
+    const { limit = '100', offset = '0' } = req.query;
+    
+    if (!hostId) {
+      return res.status(400).json({ error: MSG_MISSING_PARAM });
+    }
+    
+    const limitNum = Number.parseInt(limit as string, 10);
+    const offsetNum = Number.parseInt(offset as string, 10);
+    
+    if (Number.isNaN(limitNum) || Number.isNaN(offsetNum) || limitNum < 0 || offsetNum < 0) {
+      return res.status(400).json({ error: MSG_VALIDATION_FAILED });
+    }
+    
+    const response = await EscrowServiceAdapter.getHoldsByHostId(hostId, limitNum, offsetNum);
+    
+    // Transform gRPC response to frontend schema
+    const transformedHolds = (response.holds || []).map((hold: any) => ({
+      id: hold.id,
+      bookingId: hold.booking_id,
+      hostId: hold.host_id,
+      clientId: hold.client_id,
+      status: hold.hold_status,  // Map hold_status → status
+      grossAmountCents: Number(hold.gross_amount?.amount_cents) || 0,  // Convert to number
+      platformFeeCents: Number(hold.platform_fee?.amount_cents) || 0,
+      hostAmountCents: Number(hold.host_amount?.amount_cents) || 0,
+      releasedAt: hold.released_at,
+      refundedAt: hold.refunded_at,
+      paymentReference: hold.payment_reference,
+      createdAt: hold.created_at,
+      updatedAt: hold.updated_at,
+    }));
+    
+    res.json({
+      message: MSG_HOLDS_RETRIEVED,
+      holds: transformedHolds,
+      total_count: response.total_count || 0,
+    });
+  } catch (error: any) {
+    console.error('[Escrow Routes] Error retrieving host holds:', error);
+    res.status(500).json({ error: MSG_ERROR_RETRIEVING_HOLDS, details: error.message });
+  }
+});
+
+/**
  * GET /api/escrow/holds/:holdId
  * Retrieve hold details
+ * NOTE: Must be defined AFTER specific routes like /all, /client/:id, /host/:id
  */
 router.get('/holds/:holdId', async (req, res) => {
   try {
@@ -146,9 +295,6 @@ router.get('/holds/:holdId', async (req, res) => {
 });
 
 /**
- * POST /api/escrow/holds/:holdId/release
- * Release an escrow hold (mark as released)
- */
 router.post('/holds/:holdId/release', async (req, res) => {
   try {
     const { holdId } = req.params;

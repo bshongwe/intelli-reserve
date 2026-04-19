@@ -400,6 +400,21 @@ export const escrowService = {
     return method(request);
   },
 
+  getHoldsByClientId: async (request: any) => {
+    const method = promisifyGRPCMethod(escrowClient, 'GetHoldsByClientId');
+    return method(request);
+  },
+
+  getHoldsByHostId: async (request: any) => {
+    const method = promisifyGRPCMethod(escrowClient, 'GetHoldsByHostId');
+    return method(request);
+  },
+
+  getAllHolds: async (request: any) => {
+    const method = promisifyGRPCMethod(escrowClient, 'GetAllHolds');
+    return method(request);
+  },
+
   releaseHold: async (request: any) => {
     const method = promisifyGRPCMethod(escrowClient, 'ReleaseHold');
     return method(request);

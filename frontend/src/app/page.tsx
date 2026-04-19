@@ -1,8 +1,11 @@
 import { Check, Shield, Zap, Lock, TrendingUp, Users } from "lucide-react";
+import { Navbar } from "@/components/Navbar";
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary/30 to-background">
+      <Navbar />
+      
       {/* Hero Section */}
       <section className="flex items-center justify-center min-h-screen px-4 sm:px-6">
         <div className="text-center space-y-6 max-w-3xl">
@@ -35,7 +38,7 @@ export default function Home() {
       </section>
 
       {/* Features Section */}
-      <section className="py-16 sm:py-24 px-4 sm:px-6 max-w-6xl mx-auto">
+      <section id="features" className="py-16 sm:py-24 px-4 sm:px-6 max-w-6xl mx-auto">
         <div className="text-center mb-12 sm:mb-16">
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-3">IntelliReserve Features</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto text-sm sm:text-base">Everything you need to manage bookings, payments, and customer relationships</p>
@@ -99,7 +102,7 @@ export default function Home() {
       </section>
 
       {/* Pricing Section */}
-      <section className="py-16 sm:py-24 px-4 sm:px-6 max-w-6xl mx-auto">
+      <section id="pricing" className="py-16 sm:py-24 px-4 sm:px-6 max-w-6xl mx-auto">
         <div className="text-center mb-12 sm:mb-16">
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-3">Subscription Plans</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto text-sm sm:text-base">Transparent pricing with no hidden fees. Scale as you grow.</p>
@@ -231,6 +234,167 @@ export default function Home() {
                 <p className="text-xs font-semibold">{cert}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* About Section */}
+      <section id="about" className="py-16 sm:py-24 px-4 sm:px-6 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 items-center">
+          {/* Content */}
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">About IntelliReserve</h2>
+              <p className="text-muted-foreground text-base sm:text-lg leading-relaxed">
+                IntelliReserve is a next-generation booking platform built from the ground up for service providers and their clients. We combine cutting-edge technology with financial-grade security to create a seamless booking experience.
+              </p>
+            </div>
+            
+            <div className="space-y-4">
+              <h3 className="text-lg sm:text-xl font-semibold">Our Mission</h3>
+              <p className="text-muted-foreground">
+                To democratize access to professional booking infrastructure, enabling businesses of all sizes to compete with enterprise solutions while maintaining complete control over their customer relationships.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-lg sm:text-xl font-semibold">Why Choose Us?</h3>
+              <ul className="space-y-3">
+                <li className="flex items-start gap-3">
+                  <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-0.5">
+                    <Check className="w-3 h-3 text-primary" />
+                  </div>
+                  <span className="text-sm sm:text-base text-muted-foreground">Built by fintech experts with 20+ years of payment processing experience</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-0.5">
+                    <Check className="w-3 h-3 text-primary" />
+                  </div>
+                  <span className="text-sm sm:text-base text-muted-foreground">Bank-level security with full PCI DSS compliance</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-0.5">
+                    <Check className="w-3 h-3 text-primary" />
+                  </div>
+                  <span className="text-sm sm:text-base text-muted-foreground">24/7 dedicated support from our expert team</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-0.5">
+                    <Check className="w-3 h-3 text-primary" />
+                  </div>
+                  <span className="text-sm sm:text-base text-muted-foreground">Continuous innovation with monthly feature updates</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-2 gap-4 sm:gap-6">
+            <div className="p-6 sm:p-8 rounded-lg border bg-card/50 backdrop-blur-sm">
+              <div className="text-3xl sm:text-4xl font-bold text-primary mb-2">2026</div>
+              <p className="text-xs sm:text-sm text-muted-foreground">Founded</p>
+            </div>
+            <div className="p-6 sm:p-8 rounded-lg border bg-card/50 backdrop-blur-sm">
+              <div className="text-3xl sm:text-4xl font-bold text-primary mb-2">15</div>
+              <p className="text-xs sm:text-sm text-muted-foreground">Team Members</p>
+            </div>
+            <div className="p-6 sm:p-8 rounded-lg border bg-card/50 backdrop-blur-sm">
+              <div className="text-3xl sm:text-4xl font-bold text-primary mb-2">5</div>
+              <p className="text-xs sm:text-sm text-muted-foreground">South african Served</p>
+            </div>
+            <div className="p-6 sm:p-8 rounded-lg border bg-card/50 backdrop-blur-sm">
+              <div className="text-3xl sm:text-4xl font-bold text-primary mb-2">100%</div>
+              <p className="text-xs sm:text-sm text-muted-foreground">Customer Satisfaction</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Contact Section */}
+      <section id="contact" className="py-16 sm:py-24 px-4 sm:px-6 max-w-6xl mx-auto">
+        <div className="text-center mb-12 sm:mb-16">
+          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-3">Get in Touch</h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto text-sm sm:text-base">Have questions? Our team is here to help. Reach out and we'll get back to you as soon as possible.</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+          {/* Email */}
+          <div className="p-6 sm:p-8 rounded-lg border bg-card hover:border-primary/50 transition-colors text-center">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg bg-primary/10 flex items-center justify-center mx-auto mb-4">
+              <svg className="w-6 h-6 sm:w-7 sm:h-7 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <h3 className="text-lg sm:text-xl font-semibold mb-2">Email</h3>
+            <p className="text-sm text-muted-foreground mb-4">Send us an email and we'll respond within 24 hours</p>
+            <a href="mailto:support@intellireserve.com" className="text-primary font-semibold text-sm hover:underline">
+              support@intellireserve.com
+            </a>
+          </div>
+
+          {/* Phone */}
+          <div className="p-6 sm:p-8 rounded-lg border bg-card hover:border-primary/50 transition-colors text-center">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg bg-primary/10 flex items-center justify-center mx-auto mb-4">
+              <svg className="w-6 h-6 sm:w-7 sm:h-7 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+              </svg>
+            </div>
+            <h3 className="text-lg sm:text-xl font-semibold mb-2">Phone</h3>
+            <p className="text-sm text-muted-foreground mb-4">Call us during business hours (Mon-Fri, 9AM-5PM SAST)</p>
+            <a href="tel:+27123456789" className="text-primary font-semibold text-sm hover:underline">
+              +27 (0) 12 345 6789
+            </a>
+          </div>
+
+          {/* Live Chat */}
+          <div className="p-6 sm:p-8 rounded-lg border bg-card hover:border-primary/50 transition-colors text-center">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg bg-primary/10 flex items-center justify-center mx-auto mb-4">
+              <svg className="w-6 h-6 sm:w-7 sm:h-7 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+            </div>
+            <h3 className="text-lg sm:text-xl font-semibold mb-2">Live Chat</h3>
+            <p className="text-sm text-muted-foreground mb-4">Chat with our team in real-time on our platform</p>
+            <button className="text-primary font-semibold text-sm hover:underline">
+              Start a conversation
+            </button>
+          </div>
+        </div>
+
+        {/* Contact Form */}
+        <div className="mt-12 sm:mt-16 max-w-2xl mx-auto">
+          <div className="p-6 sm:p-8 rounded-lg border bg-card">
+            <h3 className="text-xl sm:text-2xl font-semibold mb-6">Send us a Message</h3>
+            <form className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <input
+                  type="text"
+                  placeholder="Your Name"
+                  className="w-full px-4 py-2.5 rounded-lg border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm sm:text-base"
+                />
+                <input
+                  type="email"
+                  placeholder="Your Email"
+                  className="w-full px-4 py-2.5 rounded-lg border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm sm:text-base"
+                />
+              </div>
+              <input
+                type="text"
+                placeholder="Subject"
+                className="w-full px-4 py-2.5 rounded-lg border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm sm:text-base"
+              />
+              <textarea
+                placeholder="Your Message"
+                rows={5}
+                className="w-full px-4 py-2.5 rounded-lg border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none text-sm sm:text-base"
+              />
+              <button
+                type="submit"
+                className="w-full py-2.5 sm:py-3 bg-gradient-to-r from-primary to-rose-600 text-white font-semibold rounded-lg hover:shadow-lg hover:shadow-primary/30 transition-all text-sm sm:text-base"
+              >
+                Send Message
+              </button>
+            </form>
           </div>
         </div>
       </section>

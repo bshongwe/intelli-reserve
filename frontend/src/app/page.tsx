@@ -1,10 +1,17 @@
 import { Check, Shield, Zap, Lock, TrendingUp, Users } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
+import { LiveChatWidget } from "@/components/LiveChatWidget";
+import { LiveChatButton } from "@/components/LiveChatButton";
+import { LiveChatCardButton } from "@/components/LiveChatCardButton";
+import { LiveChatProvider } from "@/contexts/LiveChatContext";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/30 to-background">
-      <Navbar />
+    <LiveChatProvider>
+      <div className="min-h-screen bg-gradient-to-br from-background via-secondary/30 to-background">
+        <Navbar />
+        <LiveChatButton />
+        <LiveChatWidget />
       
       {/* Hero Section */}
       <section className="flex items-center justify-center min-h-screen px-4 sm:px-6">
@@ -355,9 +362,7 @@ export default function Home() {
             </div>
             <h3 className="text-lg sm:text-xl font-semibold mb-2">Live Chat</h3>
             <p className="text-sm text-muted-foreground mb-4">Chat with our team in real-time on our platform</p>
-            <button className="text-primary font-semibold text-sm hover:underline">
-              Start a conversation
-            </button>
+            <LiveChatCardButton />
           </div>
         </div>
 
@@ -413,5 +418,6 @@ export default function Home() {
         </div>
       </section>
     </div>
+    </LiveChatProvider>
   );
 }

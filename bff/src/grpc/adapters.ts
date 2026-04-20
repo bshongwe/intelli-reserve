@@ -12,6 +12,7 @@ import {
   notificationService,
   identityService,
   escrowService,
+  subscriptionService,
 } from './client';
 
 /**
@@ -454,5 +455,111 @@ export const EscrowServiceAdapter = {
     return await escrowService.getDisputeStatus({
       dispute_id: disputeId,
     });
+  },
+};
+
+/**
+ * SUBSCRIPTION SERVICE ADAPTERS
+ */
+
+export const SubscriptionServiceAdapter = {
+  async activateTrial(userId: string) {
+    const response = await subscriptionService.activateTrial({
+      user_id: userId,
+    });
+    return {
+      success: response.success,
+      message: response.message,
+      trialEndsAt: response.trial_ends_at,
+      planName: response.plan_name,
+      daysRemaining: response.days_remaining,
+    };
+  },
+
+  async activateSubscription(params: {
+    userId: string;
+    planName: string;
+    paymentReference: string;
+  }) {
+    const response = await subscriptionService.activateSubscription({
+      user_id: params.userId,
+      plan_name: params.planName,
+      payment_reference: params.paymentReference,
+    });
+    return {
+      success: response.success,
+      message: response.message,
+      planName: response.plan_name,
+      nextBillingAt: response.next_billing_at,
+      amountCents: response.amount_cents,
+    };
+  },
+
+  async getSubscription(userId: string) {
+    const response = await subscriptionService.getSubscription({
+      user_id: userId,
+    });
+    return {
+      userId: response.user_id,
+      planName: response.plan_name,
+      subscriptionStatus: response.subscription_status,
+      isTrialUsed: response.is_trial_used,
+      amountCents: response.amount_cents,
+      maxBookingsPerMonth: response.max_bookings_per_month,
+      hasDynamicPricing: response.has_dynamic_pricing,
+      hasPrioritySupport: response.has_priority_support,
+      daysRemaining: response.days_remaining,
+      trialStartedAt: response.trial_started_at,
+      trialExpiresAt: response.trial_expires_at,
+      lastPaymentDate: response.last_payment_date,
+      nextBillingDate: response.next_billing_date,
+    };
+  },
+
+  async checkTrialExpiration() {
+    const response = await subscriptionService.checkTrialExpiration({});
+    return {
+      success: response.success,
+      message: response.message,
+      usersDowngraded: response.users_downgraded,
+      checkedAt: response.checked_at,
+    };
+  },
+
+  async getSubscriptionPlans() {
+    const response = await subscriptionService.getSubscriptionPlans({});
+    return {
+      plans: response.plans ? response.plans.map((plan: any) => ({
+        id: plan.id,
+        name: plan.name,
+        displayName: plan.display_name,
+        description: plan.description,
+        monthlyPriceCents: plan.monthly_price_cents,
+        maxBookingsPerMonth: plan.max_bookings_per_month,
+        hasDynamicPricing: plan.has_dynamic_pricing,
+        hasPrioritySupport: plan.has_priority_support,
+      })) : [],
+    };
+  },
+
+  async syncUserSubscriptions() {
+    const response = await subscriptionService.syncUserSubscriptions({});
+    return {
+      success: response.success,
+      message: response.message,
+      usersSynced: response.users_synced,
+      syncedAt: response.synced_at,
+    };
+  },
+
+  async verifySubscriptionConsistency() {
+    const response = await subscriptionService.verifySubscriptionConsistency({});
+    return {
+      isConsistent: response.is_consistent,
+      usersWithoutSubscription: response.users_without_subscription,
+      usersWithInvalidStatus: response.users_with_invalid_status,
+      usersWithOrphanedTrials: response.users_with_orphaned_trials,
+      message: response.message,
+    };
   },
 };

@@ -12,6 +12,7 @@ import createUserRoutes from './routes/users.routes';
 import createAuthRoutes from './routes/auth.routes';
 import escrowRoutes from './routes/escrow.routes';
 import paymentsRoutes from './routes/payments.routes';
+import { createSubscriptionRoutes } from './routes/subscription.routes';
 import { initializeGRPCClients, closeGRPCClients } from './grpc/client';
 
 // Load .env.local first
@@ -66,6 +67,7 @@ app.use('/api/analytics', createAnalyticsRoutes());
 app.use('/api/users', createUserRoutes(pool));
 app.use('/api/escrow', escrowRoutes);
 app.use('/api/payments', paymentsRoutes);
+app.use('/api/subscription', createSubscriptionRoutes());
 
 // Global error handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

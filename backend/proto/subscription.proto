@@ -1,0 +1,136 @@
+syntax = "proto3";
+
+package intelli_reserve.subscription;
+
+option go_package = "github.com/intelli-reserve/backend/gen/go/subscription";
+
+import "google/protobuf/timestamp.proto";
+
+// ============================================================================
+// MESSAGES
+// ============================================================================
+
+message SubscriptionPlan {
+  string id = 1;
+  string name = 2;
+  string display_name = 3;
+  string description = 4;
+  int32 monthly_price_cents = 5;
+  int32 max_bookings_per_month = 6;
+  bool has_advanced_analytics = 7;
+  bool has_dynamic_pricing = 8;
+  bool has_priority_support = 9;
+}
+
+message TrialActivationRequest {
+  string user_id = 1;
+  int32 trial_duration_days = 2; // Default: 14
+}
+
+message TrialActivationResponse {
+  string user_id = 1;
+  string subscription_status = 2;
+  google.protobuf.Timestamp trial_started_at = 3;
+  google.protobuf.Timestamp trial_expires_at = 4;
+  bool success = 5;
+  string error_message = 6;
+}
+
+message SubscriptionActivationRequest {
+  string user_id = 1;
+  string plan_name = 2; // 'starter', 'professional', 'enterprise'
+  string payment_reference = 3;
+  int32 amount_cents = 4;
+}
+
+message SubscriptionActivationResponse {
+  string user_id = 1;
+  string subscription_status = 2;
+  google.protobuf.Timestamp subscription_started_at = 3;
+  google.protobuf.Timestamp next_billing_date = 4;
+  bool success = 5;
+  string error_message = 6;
+}
+
+message GetSubscriptionRequest {
+  string user_id = 1;
+}
+
+message GetSubscriptionResponse {
+  string user_id = 1;
+  SubscriptionPlan plan = 2;
+  string subscription_status = 3;
+  google.protobuf.Timestamp trial_started_at = 4;
+  google.protobuf.Timestamp trial_expires_at = 5;
+  google.protobuf.Timestamp last_payment_date = 6;
+  google.protobuf.Timestamp next_billing_date = 7;
+  bool is_trial_used = 8;
+}
+
+message CheckTrialExpirationRequest {
+  // Empty - processes all expired trials
+}
+
+message CheckTrialExpirationResponse {
+  int32 downgraded_users_count = 1;
+  bool success = 2;
+  string error_message = 3;
+}
+
+message GetSubscriptionPlansRequest {
+  // Empty - returns all plans
+}
+
+message GetSubscriptionPlansResponse {
+  repeated SubscriptionPlan plans = 1;
+}
+
+message SyncUserSubscriptionsRequest {
+  // Empty - syncs all users without subscriptions to Starter plan
+}
+
+message SyncUserSubscriptionsResponse {
+  bool success = 1;
+  string message = 2;
+  int64 users_synced = 3;
+  google.protobuf.Timestamp synced_at = 4;
+}
+
+message VerifySubscriptionConsistencyRequest {
+  // Empty - checks all users for subscription consistency
+}
+
+message VerifySubscriptionConsistencyResponse {
+  bool is_consistent = 1;
+  int32 users_without_subscription = 2;
+  int32 users_with_invalid_status = 3;
+  int32 users_with_orphaned_trials = 4;
+  string message = 5;
+}
+
+// ============================================================================
+// SERVICE
+// ============================================================================
+
+service SubscriptionService {
+  // Activate 14-day free trial for Professional plan
+  rpc ActivateTrial(TrialActivationRequest) returns (TrialActivationResponse);
+  
+  // Activate paid subscription after trial or direct signup
+  rpc ActivateSubscription(SubscriptionActivationRequest) returns (SubscriptionActivationResponse);
+  
+  // Get user's current subscription info
+  rpc GetSubscription(GetSubscriptionRequest) returns (GetSubscriptionResponse);
+  
+  // Check and auto-downgrade expired trials (called by scheduler/cron)
+  rpc CheckTrialExpiration(CheckTrialExpirationRequest) returns (CheckTrialExpirationResponse);
+  
+  // Get all subscription plans
+  rpc GetSubscriptionPlans(GetSubscriptionPlansRequest) returns (GetSubscriptionPlansResponse);
+  
+  // Sync all users without subscriptions to Starter plan (data migration)
+  rpc SyncUserSubscriptions(SyncUserSubscriptionsRequest) returns (SyncUserSubscriptionsResponse);
+  
+  // Verify subscription consistency across all users
+  rpc VerifySubscriptionConsistency(VerifySubscriptionConsistencyRequest) returns (VerifySubscriptionConsistencyResponse);
+}

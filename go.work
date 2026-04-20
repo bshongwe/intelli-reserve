@@ -17,4 +17,5 @@ use (
 	./backend/notification-worker
 	./backend/identity-service
 	./backend/services-service
+	./backend/subscription-service
 )

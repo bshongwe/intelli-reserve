@@ -138,9 +138,9 @@ export default function Home() {
                 <span className="text-xs sm:text-sm">Email support</span>
               </li>
             </ul>
-            <button className="w-full py-2.5 sm:py-3 border rounded-lg hover:bg-secondary transition-colors text-xs sm:text-sm font-medium">
+            <a href="/auth/signup" className="w-full py-2.5 sm:py-3 border rounded-lg hover:bg-secondary transition-colors text-xs sm:text-sm font-medium text-center">
               Get Started
-            </button>
+            </a>
           </div>
 
           {/* Professional Plan (Featured) */}
@@ -172,9 +172,9 @@ export default function Home() {
                 <span className="text-xs sm:text-sm">Priority support</span>
               </li>
             </ul>
-            <button className="w-full py-2.5 sm:py-3 bg-gradient-to-r from-primary to-rose-600 text-white rounded-lg hover:shadow-lg transition-all text-xs sm:text-sm font-medium">
+            <a href="/auth/signup" className="w-full py-2.5 sm:py-3 bg-gradient-to-r from-primary to-rose-600 text-white rounded-lg hover:shadow-lg transition-all text-xs sm:text-sm font-medium text-center">
               Start Free Trial
-            </button>
+            </a>
           </div>
 
           {/* Enterprise Plan */}
@@ -202,9 +202,9 @@ export default function Home() {
                 <span className="text-xs sm:text-sm">Custom features</span>
               </li>
             </ul>
-            <button className="w-full py-2.5 sm:py-3 border rounded-lg hover:bg-secondary transition-colors text-xs sm:text-sm font-medium">
+            <a href="#contact" className="w-full py-2.5 sm:py-3 border rounded-lg hover:bg-secondary transition-colors text-xs sm:text-sm font-medium text-center">
               Contact Sales
-            </button>
+            </a>
           </div>
         </div>
       </section>

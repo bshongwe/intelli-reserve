@@ -28,6 +28,7 @@ export function createSubscriptionRoutes(): Router {
       (req as any).userEmail = decoded.email;
       next();
     } catch (error) {
+      console.error('Authentication error:', error);
       res.status(401).json({ error: 'Invalid token' });
     }
   };

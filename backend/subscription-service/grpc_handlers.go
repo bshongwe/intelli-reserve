@@ -14,6 +14,10 @@ import (
 
 const (
 	trialDurationDays = 14
+	
+	// Error messages
+	errFailedVerifyConsistency = "failed to verify consistency"
+	errUserIDRequired          = "user_id is required"
 )
 
 // SyncUserSubscriptions ensures all users have a valid subscription plan assigned
@@ -105,7 +109,7 @@ func (s *SubscriptionServer) VerifySubscriptionConsistency(
 	).Scan(&usersWithoutSub)
 	if err != nil {
 		log.Printf("Failed to check subscription consistency: %v", err)
-		return nil, fmt.Errorf("failed to verify consistency")
+		return nil, fmt.Errorf(errFailedVerifyConsistency)
 	}
 
 	// Find users with invalid subscription status
@@ -117,7 +121,7 @@ func (s *SubscriptionServer) VerifySubscriptionConsistency(
 	`).Scan(&usersWithInvalidStatus)
 	if err != nil {
 		log.Printf("Failed to check invalid status: %v", err)
-		return nil, fmt.Errorf("failed to verify consistency")
+		return nil, fmt.Errorf(errFailedVerifyConsistency)
 	}
 
 	// Find users with orphaned trial dates
@@ -129,7 +133,7 @@ func (s *SubscriptionServer) VerifySubscriptionConsistency(
 	`).Scan(&usersWithOrphanedTrials)
 	if err != nil {
 		log.Printf("Failed to check orphaned trials: %v", err)
-		return nil, fmt.Errorf("failed to verify consistency")
+		return nil, fmt.Errorf(errFailedVerifyConsistency)
 	}
 
 	isConsistent := usersWithoutSub == 0 && usersWithInvalidStatus == 0 && usersWithOrphanedTrials == 0
@@ -152,7 +156,7 @@ func (s *SubscriptionServer) ActivateTrial(
 	req *subscription.TrialActivationRequest,
 ) (*subscription.TrialActivationResponse, error) {
 	if req.UserId == "" {
-		return nil, fmt.Errorf("user_id is required")
+		return nil, fmt.Errorf(errUserIDRequired)
 	}
 
 	// Get professional plan ID
@@ -216,7 +220,7 @@ func (s *SubscriptionServer) ActivateSubscription(
 	req *subscription.SubscriptionActivationRequest,
 ) (*subscription.SubscriptionActivationResponse, error) {
 	if req.UserId == "" {
-		return nil, fmt.Errorf("user_id is required")
+		return nil, fmt.Errorf(errUserIDRequired)
 	}
 	if req.PlanName == "" {
 		return nil, fmt.Errorf("plan_name is required")
@@ -303,7 +307,7 @@ func (s *SubscriptionServer) GetSubscription(
 	req *subscription.GetSubscriptionRequest,
 ) (*subscription.GetSubscriptionResponse, error) {
 	if req.UserId == "" {
-		return nil, fmt.Errorf("user_id is required")
+		return nil, fmt.Errorf(errUserIDRequired)
 	}
 
 	var (

@@ -129,7 +129,7 @@ export function createSubscriptionRoutes(): Router {
     try {
       const response = await SubscriptionServiceAdapter.getSubscriptionPlans();
 
-      if (!response || !response.plans) {
+      if (!response.plans) {
         return res.status(500).json({ error: 'Failed to fetch plans' });
       }
 

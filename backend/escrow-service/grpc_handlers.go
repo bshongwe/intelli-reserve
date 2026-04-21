@@ -29,20 +29,29 @@ const (
 	errDisputeNotFound      = "dispute_not_found"
 	errInvalidHoldStatus    = "invalid_hold_status"
 	errUnauthorized         = "unauthorized"
+	
+	// Hold query error messages
+	errFailedQueryHolds     = "Failed to query holds"
+	errFailedRetrieveHolds  = "Failed to retrieve holds"
+	errFailedCountHolds     = "Failed to count holds"
 )
 
 // Log message constants
 const (
-	logMissingFields   = "❌ Validation error: Missing required fields"
-	logDBError         = "⚠️ Database error: %v"
-	logHoldCreated     = "✅ Hold created successfully: %s"
-	logHoldReleased    = "✅ Hold released: %s"
-	logHoldRefunded    = "✅ Hold refunded: %s"
-	logAccountCreated  = "✅ Escrow account created for host: %s"
-	logPayoutRequested = "✅ Payout requested: %s"
-	logTransactionRec  = "📋 Transaction recorded: %s"
-	logDisputeOpened   = "📋 Dispute opened: %s"
-	logBalanceUpdated  = "💰 Balance updated for host: %s"
+	logMissingFields         = "❌ Validation error: Missing required fields"
+	logDBError               = "⚠️ Database error: %v"
+	logHoldCreated           = "✅ Hold created successfully: %s"
+	logHoldReleased          = "✅ Hold released: %s"
+	logHoldRefunded          = "✅ Hold refunded: %s"
+	logAccountCreated        = "✅ Escrow account created for host: %s"
+	logPayoutRequested       = "✅ Payout requested: %s"
+	logTransactionRec        = "📋 Transaction recorded: %s"
+	logDisputeOpened         = "📋 Dispute opened: %s"
+	logBalanceUpdated        = "💰 Balance updated for host: %s"
+	
+	// Error log messages
+	logErrScanHoldRow        = "[Escrow Service] Error scanning hold row: %v"
+	logErrIterateHoldRow     = "[Escrow Service] Error iterating hold row: %v"
 )
 
 // Template constants for logging
@@ -468,8 +477,8 @@ func (s *EscrowServiceServer) GetHoldsByBookingId(ctx context.Context, req *pb.G
 		log.Printf("[Escrow Service] Error querying holds for booking %s: %v", req.BookingId, err)
 		return &pb.GetHoldsByBookingIdResponse{
 			Success:      false,
-			ErrorMessage: "Failed to query holds",
-		}, status.Error(codes.Internal, "Failed to query holds")
+			ErrorMessage: errFailedQueryHolds,
+		}, status.Error(codes.Internal, errFailedQueryHolds)
 	}
 	defer rows.Close()
 
@@ -491,7 +500,7 @@ func (s *EscrowServiceServer) GetHoldsByBookingId(ctx context.Context, req *pb.G
 		)
 
 		if err != nil {
-			log.Printf("[Escrow Service] Error scanning hold row: %v", err)
+			log.Printf(logErrScanHoldRow, err)
 			continue
 		}
 
@@ -508,11 +517,11 @@ func (s *EscrowServiceServer) GetHoldsByBookingId(ctx context.Context, req *pb.G
 	}
 
 	if err = rows.Err(); err != nil {
-		log.Printf("[Escrow Service] Error iterating hold rows: %v", err)
+		log.Printf(logErrIterateHoldRow, err)
 		return &pb.GetHoldsByBookingIdResponse{
 			Success:      false,
-			ErrorMessage: "Failed to retrieve holds",
-		}, status.Error(codes.Internal, "Failed to retrieve holds")
+			ErrorMessage: errFailedRetrieveHolds,
+		}, status.Error(codes.Internal, errFailedRetrieveHolds)
 	}
 
 	return &pb.GetHoldsByBookingIdResponse{
@@ -542,8 +551,8 @@ func (s *EscrowServiceServer) GetHoldsByClientId(ctx context.Context, req *pb.Ge
 		log.Printf("[Escrow Service] Error counting holds for client %s: %v", req.ClientId, err)
 		return &pb.GetHoldsByClientIdResponse{
 			Success:      false,
-			ErrorMessage: "Failed to count holds",
-		}, status.Error(codes.Internal, "Failed to count holds")
+			ErrorMessage: errFailedCountHolds,
+		}, status.Error(codes.Internal, errFailedCountHolds)
 	}
 
 	// Set default and max limits
@@ -573,8 +582,8 @@ func (s *EscrowServiceServer) GetHoldsByClientId(ctx context.Context, req *pb.Ge
 		log.Printf("[Escrow Service] Error querying holds for client %s: %v", req.ClientId, err)
 		return &pb.GetHoldsByClientIdResponse{
 			Success:      false,
-			ErrorMessage: "Failed to query holds",
-		}, status.Error(codes.Internal, "Failed to query holds")
+			ErrorMessage: errFailedQueryHolds,
+		}, status.Error(codes.Internal, errFailedQueryHolds)
 	}
 	defer rows.Close()
 
@@ -596,7 +605,7 @@ func (s *EscrowServiceServer) GetHoldsByClientId(ctx context.Context, req *pb.Ge
 		)
 
 		if err != nil {
-			log.Printf("[Escrow Service] Error scanning hold row: %v", err)
+			log.Printf(logErrScanHoldRow, err)
 			continue
 		}
 
@@ -613,11 +622,11 @@ func (s *EscrowServiceServer) GetHoldsByClientId(ctx context.Context, req *pb.Ge
 	}
 
 	if err = rows.Err(); err != nil {
-		log.Printf("[Escrow Service] Error iterating hold rows: %v", err)
+		log.Printf(logErrIterateHoldRow, err)
 		return &pb.GetHoldsByClientIdResponse{
 			Success:      false,
-			ErrorMessage: "Failed to retrieve holds",
-		}, status.Error(codes.Internal, "Failed to retrieve holds")
+			ErrorMessage: errFailedRetrieveHolds,
+		}, status.Error(codes.Internal, errFailedRetrieveHolds)
 	}
 
 	return &pb.GetHoldsByClientIdResponse{
@@ -648,8 +657,8 @@ func (s *EscrowServiceServer) GetHoldsByHostId(ctx context.Context, req *pb.GetH
 		log.Printf("[Escrow Service] Error counting holds for host %s: %v", req.HostId, err)
 		return &pb.GetHoldsByHostIdResponse{
 			Success:      false,
-			ErrorMessage: "Failed to count holds",
-		}, status.Error(codes.Internal, "Failed to count holds")
+			ErrorMessage: errFailedCountHolds,
+		}, status.Error(codes.Internal, errFailedCountHolds)
 	}
 
 	// Set default and max limits
@@ -679,8 +688,8 @@ func (s *EscrowServiceServer) GetHoldsByHostId(ctx context.Context, req *pb.GetH
 		log.Printf("[Escrow Service] Error querying holds for host %s: %v", req.HostId, err)
 		return &pb.GetHoldsByHostIdResponse{
 			Success:      false,
-			ErrorMessage: "Failed to query holds",
-		}, status.Error(codes.Internal, "Failed to query holds")
+			ErrorMessage: errFailedQueryHolds,
+		}, status.Error(codes.Internal, errFailedQueryHolds)
 	}
 	defer rows.Close()
 
@@ -702,7 +711,7 @@ func (s *EscrowServiceServer) GetHoldsByHostId(ctx context.Context, req *pb.GetH
 		)
 
 		if err != nil {
-			log.Printf("[Escrow Service] Error scanning hold row: %v", err)
+			log.Printf(logErrScanHoldRow, err)
 			continue
 		}
 
@@ -722,11 +731,11 @@ func (s *EscrowServiceServer) GetHoldsByHostId(ctx context.Context, req *pb.GetH
 	}
 
 	if err = rows.Err(); err != nil {
-		log.Printf("[Escrow Service] Error iterating hold rows: %v", err)
+		log.Printf(logErrIterateHoldRow, err)
 		return &pb.GetHoldsByHostIdResponse{
 			Success:      false,
-			ErrorMessage: "Failed to retrieve holds",
-		}, status.Error(codes.Internal, "Failed to retrieve holds")
+			ErrorMessage: errFailedRetrieveHolds,
+		}, status.Error(codes.Internal, errFailedRetrieveHolds)
 	}
 
 	return &pb.GetHoldsByHostIdResponse{
@@ -756,8 +765,8 @@ func (s *EscrowServiceServer) GetAllHolds(ctx context.Context, req *pb.GetAllHol
 		log.Printf("[Escrow Service] Error counting all holds: %v", err)
 		return &pb.GetAllHoldsResponse{
 			Success:      false,
-			ErrorMessage: "Failed to count holds",
-		}, status.Error(codes.Internal, "Failed to count holds")
+			ErrorMessage: errFailedCountHolds,
+		}, status.Error(codes.Internal, errFailedCountHolds)
 	}
 
 	// Set default and max limits
@@ -788,8 +797,8 @@ func (s *EscrowServiceServer) GetAllHolds(ctx context.Context, req *pb.GetAllHol
 		log.Printf("[Escrow Service] Error querying all holds: %v", err)
 		return &pb.GetAllHoldsResponse{
 			Success:      false,
-			ErrorMessage: "Failed to query holds",
-		}, status.Error(codes.Internal, "Failed to query holds")
+			ErrorMessage: errFailedQueryHolds,
+		}, status.Error(codes.Internal, errFailedQueryHolds)
 	}
 	defer rows.Close()
 
@@ -811,7 +820,7 @@ func (s *EscrowServiceServer) GetAllHolds(ctx context.Context, req *pb.GetAllHol
 		)
 
 		if err != nil {
-			log.Printf("[Escrow Service] Error scanning hold row: %v", err)
+			log.Printf(logErrScanHoldRow, err)
 			continue
 		}
 
@@ -831,11 +840,11 @@ func (s *EscrowServiceServer) GetAllHolds(ctx context.Context, req *pb.GetAllHol
 	}
 
 	if err = rows.Err(); err != nil {
-		log.Printf("[Escrow Service] Error iterating hold rows: %v", err)
+		log.Printf(logErrIterateHoldRow, err)
 		return &pb.GetAllHoldsResponse{
 			Success:      false,
-			ErrorMessage: "Failed to retrieve holds",
-		}, status.Error(codes.Internal, "Failed to retrieve holds")
+			ErrorMessage: errFailedRetrieveHolds,
+		}, status.Error(codes.Internal, errFailedRetrieveHolds)
 	}
 
 	return &pb.GetAllHoldsResponse{

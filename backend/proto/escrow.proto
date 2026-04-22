@@ -261,6 +261,7 @@ message GetAvailableBalanceResponse {
 message RequestPayoutRequest {
   string host_id = 1;
   int64 amount_cents = 2;
+  string bank_account_token = 3;  // Tokenized bank account from PayFast
 }
 
 message RequestPayoutResponse {

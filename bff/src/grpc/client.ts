@@ -15,6 +15,7 @@ const SERVICES_URL = process.env.SERVICES_GRPC_URL || 'localhost:8093';
 const NOTIFICATION_URL = process.env.NOTIFICATION_GRPC_URL || 'localhost:8094';
 const IDENTITY_URL = process.env.IDENTITY_GRPC_URL || 'localhost:8095';
 const ESCROW_URL = process.env.ESCROW_GRPC_URL || 'localhost:8096';
+const PAYOUT_URL = process.env.PAYOUT_GRPC_URL || 'localhost:8097';
 const SUBSCRIPTION_URL = process.env.SUBSCRIPTION_GRPC_URL || 'localhost:50009';
 
 // Package definitions
@@ -25,6 +26,7 @@ let inventoryPackageDef: any;
 let notificationPackageDef: any;
 let identityPackageDef: any;
 let escrowPackageDef: any;
+let payoutPackageDef: any;
 let subscriptionPackageDef: any;
 
 // gRPC clients
@@ -35,6 +37,7 @@ let inventoryClient: any;
 let notificationClient: any;
 let identityClient: any;
 let escrowClient: any;
+let payoutClient: any;
 let subscriptionClient: any;
 
 /**
@@ -106,6 +109,15 @@ export async function initializeGRPCClients(): Promise<void> {
       includeDirs: [PROTO_PATH],
     });
 
+    payoutPackageDef = protoLoader.loadSync(path.join(PROTO_PATH, 'escrow.proto'), {
+      keepCase: true,
+      longs: String,
+      enums: String,
+      defaults: true,
+      oneofs: true,
+      includeDirs: [PROTO_PATH],
+    });
+
     subscriptionPackageDef = protoLoader.loadSync(path.join(PROTO_PATH, 'subscription.proto'), {
       keepCase: true,
       longs: String,
@@ -123,6 +135,7 @@ export async function initializeGRPCClients(): Promise<void> {
     const notificationGrpcObj = grpc.loadPackageDefinition(notificationPackageDef) as any;
     const identityGrpcObj = grpc.loadPackageDefinition(identityPackageDef) as any;
     const escrowGrpcObj = grpc.loadPackageDefinition(escrowPackageDef) as any;
+    const payoutGrpcObj = grpc.loadPackageDefinition(payoutPackageDef) as any;
     const subscriptionGrpcObj = grpc.loadPackageDefinition(subscriptionPackageDef) as any;
 
     // Create clients
@@ -133,6 +146,7 @@ export async function initializeGRPCClients(): Promise<void> {
     const NotificationService = notificationGrpcObj.intelli_reserve.notification.NotificationService;
     const IdentityService = identityGrpcObj.intelli_reserve.identity.IdentityService;
     const EscrowService = escrowGrpcObj.intelli_reserve.escrow.EscrowService;
+    const PayoutService = payoutGrpcObj.intelli_reserve.escrow.EscrowService;
     const SubscriptionService = subscriptionGrpcObj.intelli_reserve.subscription.SubscriptionService;
 
     bookingClient = new BookingService(BACKEND_URL, grpc.credentials.createInsecure());

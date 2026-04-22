@@ -156,6 +156,7 @@ export async function initializeGRPCClients(): Promise<void> {
     notificationClient = new NotificationService(NOTIFICATION_URL, grpc.credentials.createInsecure());
     identityClient = new IdentityService(IDENTITY_URL, grpc.credentials.createInsecure());
     escrowClient = new EscrowService(ESCROW_URL, grpc.credentials.createInsecure());
+    payoutClient = new PayoutService(PAYOUT_URL, grpc.credentials.createInsecure());
     subscriptionClient = new SubscriptionService(SUBSCRIPTION_URL, grpc.credentials.createInsecure());
 
     console.log('✅ gRPC clients initialized successfully');
@@ -544,6 +545,7 @@ export function closeGRPCClients(): void {
   if (notificationClient) notificationClient.close();
   if (identityClient) identityClient.close();
   if (escrowClient) escrowClient.close();
+  if (payoutClient) payoutClient.close();
   if (subscriptionClient) subscriptionClient.close();
   console.log('✅ gRPC clients closed');
 }
